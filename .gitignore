@@ -1,0 +1,11 @@
+# dependencies
+node_modules/
+
+# runtime logs
+logs/
+*.log
+
+# os junk
+Thumbs.db
+Desktop.ini
+.DS_Store
