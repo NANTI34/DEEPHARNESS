@@ -9,9 +9,11 @@
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\install.ps1
     powershell -ExecutionPolicy Bypass -File .\install.ps1 -SkipNpmInstall
+    powershell -ExecutionPolicy Bypass -File .\install.ps1 -Force
 #>
 param(
-    [switch]$SkipNpmInstall
+    [switch]$SkipNpmInstall,
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,8 +36,8 @@ Write-Host "[1/3] Node.js: $nodeVer @ $($node.Source)" -ForegroundColor Green
 # 2. 安装依赖
 $appDir = Join-Path $Root 'app'
 $nm = Join-Path $appDir 'node_modules'
-if ($SkipNpmInstall -or (Test-Path $nm)) {
-    Write-Host '[2/3] 跳过 npm install(node_modules 已存在)' -ForegroundColor Yellow
+if ($SkipNpmInstall -or ((Test-Path $nm) -and -not $Force)) {
+    Write-Host '[2/3] 跳过 npm install(node_modules 已存在;-Force 可强制重装)' -ForegroundColor Yellow
 } else {
     Write-Host '[2/3] 安装应用依赖(npm install,首次约 1-3 分钟)...' -ForegroundColor Yellow
     Push-Location $appDir

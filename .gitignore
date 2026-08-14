@@ -5,6 +5,9 @@ node_modules/
 logs/
 *.log
 
+# local presentation (not published)
+docs/
+
 # os junk
 Thumbs.db
 Desktop.ini
