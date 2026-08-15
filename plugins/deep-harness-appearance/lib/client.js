@@ -2,11 +2,11 @@
 // 由 dsh-client-modules 扫描 dsh.client 声明后以 /plugins/deep-harness-appearance/client.js 提供,
 // 页面内核通过 window.__ModuleLoader__.load 注册为 cordis 客户端插件。
 // 能力:
-//  1. 会话视图栏新增「文件」「终端」标签(conversation.view 槽位)
+//  1. 会话视图栏「文件」「终端」标签(conversation.view 槽位)
 //  2. 文件视图:工作区文件树 + 预览/编辑/保存/新建(经 /deepharness/api/*)
-//  3. 终端面板:工作区根目录命令执行(经 /deepharness/api/exec)
+//  3. 终端面板:工作区根目录命令执行 + 清屏 + 历史
 //  4. 费用估算:基于 tokenUsage 投影,按 DeepSeek 官方峰谷定价估算本会话费用
-//  5. 外观:品牌顶栏色 / 字体切换 / 渐变背景 / 字体导入(设置 → 通用 → DEEPHARNESS 外观)
+//  5. 外观:品牌顶栏色 / 字体 / 渐变与图片背景(16:9 固定比例裁剪)/ 半透明毛玻璃
 window.__ModuleLoader__.load({
   id: "deep-harness-appearance",
   factory: (require) => {
@@ -57,8 +57,6 @@ window.__ModuleLoader__.load({
     }
 
     // ── 费用估算(DeepSeek 官方定价,2026-08-17 起峰谷)──────────────
-    // 价格:元 / 百万 tokens(官方 https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)
-    // 高峰时段(北京时间):9:00-12:00、14:00-18:00;空闲时段 = 高峰 × 0.5
     const PRICING = {
       "deepseek-v4-flash": {
         legacy: { input: 1, cacheRead: 0.02, output: 2 },
@@ -99,6 +97,7 @@ window.__ModuleLoader__.load({
       return n >= 10000 ? (n / 1000).toFixed(1) + "k" : String(n);
     }
 
+    // ── 样式 ─────────────────────────────────────────────────────────
     const STYLES = {
       cost: {
         display: "block", textAlign: "center", fontSize: "12px", lineHeight: "20px",
@@ -108,58 +107,65 @@ window.__ModuleLoader__.load({
       },
       panel: {
         display: "flex", flexDirection: "column", height: "100%", minHeight: 0,
-        boxSizing: "border-box", padding: "12px 16px", gap: "10px",
+        boxSizing: "border-box", padding: "10px 14px", gap: "8px",
         fontFamily: "var(--dsh-font-family, inherit)"
       },
+      split: { display: "flex", flex: 1, minHeight: 0, gap: "8px" },
+      treeCol: {
+        width: "30%", minWidth: 180, maxWidth: 320, overflowY: "auto",
+        border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px", padding: "4px",
+        fontSize: "12px"
+      },
       treeRow: {
-        display: "flex", alignItems: "center", gap: "6px", padding: "2px 4px",
-        borderRadius: "6px", cursor: "pointer", fontSize: "13px", lineHeight: "22px",
+        display: "flex", alignItems: "center", gap: "4px", padding: "1px 6px",
+        borderRadius: "5px", cursor: "pointer", fontSize: "12px", lineHeight: "20px",
         whiteSpace: "nowrap", userSelect: "none"
       },
+      editorCol: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "6px" },
       editor: {
         flex: 1, minHeight: 0, width: "100%", boxSizing: "border-box",
         background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)",
         border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px",
-        padding: "10px 12px", fontSize: "13px", lineHeight: "1.55",
+        padding: "8px 10px", fontSize: "12.5px", lineHeight: "1.5",
         fontFamily: "Consolas, 'Cascadia Code', monospace", resize: "none", outline: "none"
       },
       terminal: {
         flex: 1, minHeight: 0, width: "100%", boxSizing: "border-box",
-        background: "#0B1120", color: "#D1D5DB",
+        background: "rgba(11,17,32,0.85)", color: "#D1D5DB",
         border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px",
-        padding: "10px 12px", fontSize: "12.5px", lineHeight: "1.5",
+        padding: "8px 10px", fontSize: "12px", lineHeight: "1.45",
         fontFamily: "Consolas, 'Cascadia Code', monospace", overflowY: "auto",
         whiteSpace: "pre-wrap", wordBreak: "break-all"
       },
-      cmdInput: {
-        display: "flex", gap: "8px", alignItems: "center"
-      },
+      cmdInput: { display: "flex", gap: "6px", alignItems: "center" },
       input: {
         flex: 1, minWidth: 0, boxSizing: "border-box",
         background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)",
         border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px",
-        padding: "8px 12px", fontSize: "13px", fontFamily: "inherit", outline: "none"
+        padding: "6px 10px", fontSize: "12.5px", fontFamily: "inherit", outline: "none"
       },
       button: {
-        padding: "6px 14px", borderRadius: "8px", border: "1px solid var(--dsw-alias-border-l2)",
+        padding: "5px 12px", borderRadius: "7px", border: "1px solid var(--dsw-alias-border-l2)",
         background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)",
-        fontSize: "13px", cursor: "pointer"
+        fontSize: "12.5px", cursor: "pointer", whiteSpace: "nowrap"
       },
       buttonPrimary: {
-        padding: "6px 14px", borderRadius: "8px", border: "none",
-        background: "#4D6BFE", color: "#fff", fontSize: "13px", cursor: "pointer"
+        padding: "5px 12px", borderRadius: "7px", border: "none",
+        background: "#4D6BFE", color: "#fff", fontSize: "12.5px", cursor: "pointer", whiteSpace: "nowrap"
       },
-      split: { display: "flex", flex: 1, minHeight: 0, gap: "10px" },
-      treeCol: { width: "42%", minWidth: 220, maxWidth: 420, overflowY: "auto", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px", padding: "6px" },
-      editorCol: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "8px" },
       hint: { fontSize: "12px", color: "var(--dsw-alias-label-tertiary)" },
       row: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
       select: {
         background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)",
-        border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px",
-        padding: "6px 10px", fontSize: "13px"
+        border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "7px",
+        padding: "5px 8px", fontSize: "12.5px", maxWidth: 260
       },
-      label: { fontSize: "13px", color: "var(--dsw-alias-label-secondary)", minWidth: 72 }
+      label: { fontSize: "13px", color: "var(--dsw-alias-label-secondary)", minWidth: 64 },
+      section: {
+        display: "flex", flexDirection: "column", gap: "10px",
+        borderBottom: "1px solid var(--dsw-alias-border-l2)", padding: "12px 0"
+      },
+      sectionTitle: { fontSize: "13.5px", fontWeight: 600, color: "var(--dsw-alias-label-primary)" }
     };
 
     // ── 费用行 ──────────────────────────────────────────────────────
@@ -180,7 +186,7 @@ window.__ModuleLoader__.load({
     }
 
     // ── 文件视图 ────────────────────────────────────────────────────
-    function FileTree({ expanded, onToggle, onSelect, selected, root }) {
+    function FileTree({ expanded, onToggle, onSelect, selected, root, refreshKey }) {
       const [dirs, setDirs] = React.useState({});
       const load = React.useCallback(async (rel) => {
         try {
@@ -188,7 +194,7 @@ window.__ModuleLoader__.load({
           setDirs(prev => ({ ...prev, [rel]: d.tree.children || [] }));
         } catch { setDirs(prev => ({ ...prev, [rel]: [] })); }
       }, []);
-      React.useEffect(() => { load(root || "."); }, [root, load]);
+      React.useEffect(() => { load(root || "."); }, [root, load, refreshKey]);
 
       const renderChildren = (rel) => {
         const children = rel === (root || ".") ? (dirs[root || "."] || []) : (dirs[rel] || []);
@@ -197,7 +203,8 @@ window.__ModuleLoader__.load({
           const isOpen = expanded.has(child.rel);
           return React.createElement(React.Fragment, { key: child.rel },
             React.createElement("div", {
-              style: { ...STYLES.treeRow, paddingLeft: "12px" },
+              style: { ...STYLES.treeRow, paddingLeft: 10 },
+              title: child.rel,
               onClick: () => {
                 if (isDir) {
                   onToggle(child.rel);
@@ -207,14 +214,17 @@ window.__ModuleLoader__.load({
                 }
               }
             },
-              React.createElement("span", { style: { width: 16, textAlign: "center", color: "var(--dsw-alias-label-tertiary)" } },
-                isDir ? (isOpen ? "▾" : "▸") : "·"),
-              React.createElement("span", { style: isDir ? { fontWeight: 600, color: "var(--dsw-alias-label-primary)" } : (selected === child.rel ? { color: "#4D6BFE" } : { color: "var(--dsw-alias-label-secondary)" }) },
-                child.name),
-              child.size !== undefined && React.createElement("span", { style: { marginLeft: "auto", fontSize: 11, color: "var(--dsw-alias-label-tertiary)" } },
-                child.size > 1024 ? (child.size / 1024).toFixed(1) + "KB" : child.size + "B")
+              React.createElement("span", { style: { width: 14, textAlign: "center", color: "var(--dsw-alias-label-tertiary)", fontSize: 11 } },
+                isDir ? (isOpen ? "▾" : "▸") : ""),
+              React.createElement("span", {
+                style: isDir
+                  ? { fontWeight: 600, color: "var(--dsw-alias-label-primary)" }
+                  : (selected === child.rel ? { color: "#4D6BFE" } : { color: "var(--dsw-alias-label-secondary)" })
+              }, child.name),
+              child.size !== undefined && React.createElement("span", { style: { marginLeft: "auto", fontSize: 10, color: "var(--dsw-alias-label-tertiary)" } },
+                child.size > 1024 ? (child.size / 1024).toFixed(1) + "K" : child.size + "B")
             ),
-            isDir && isOpen && React.createElement("div", { style: { marginLeft: 12, borderLeft: "1px solid var(--dsw-alias-border-l2)" } },
+            isDir && isOpen && React.createElement("div", { style: { marginLeft: 10, borderLeft: "1px solid var(--dsw-alias-border-l2)" } },
               renderChildren(child.rel))
           );
         });
@@ -228,15 +238,17 @@ window.__ModuleLoader__.load({
       const [expanded, setExpanded] = React.useState(new Set());
       const [selected, setSelected] = React.useState(null);
       const [content, setContent] = React.useState(null); // {rel,text,binary,truncated,size}
+      const [editing, setEditing] = React.useState("");
       const [dirty, setDirty] = React.useState(false);
       const [msg, setMsg] = React.useState("");
-      const [editing, setEditing] = React.useState("");
+      const [refreshKey, setRefreshKey] = React.useState(0);
 
       const openFile = async (rel) => {
         try {
           const d = await apiGet("/file?path=" + encodeURIComponent(rel));
           setSelected(rel);
           setContent(d);
+          setEditing(d.binary ? "" : (d.content || ""));
           setDirty(false);
           setMsg(d.binary ? "二进制文件,仅显示大小" : d.truncated ? "文件过大,仅显示前 2MB" : "");
         } catch (err) {
@@ -248,7 +260,8 @@ window.__ModuleLoader__.load({
         try {
           await apiPost("/write", { path: content.rel, content: editing });
           setDirty(false);
-          setMsg("已保存 " + content.rel);
+          setMsg("✓ 已保存 " + content.rel);
+          setRefreshKey(k => k + 1);
         } catch (err) {
           setMsg("保存失败: " + String(err.message || err));
         }
@@ -258,7 +271,8 @@ window.__ModuleLoader__.load({
         if (!name) return;
         try {
           await apiPost("/write", { path: name, content: "" });
-          setMsg("已创建 " + name);
+          setMsg("✓ 已创建 " + name);
+          setRefreshKey(k => k + 1);
         } catch (err) {
           setMsg("创建失败: " + String(err.message || err));
         }
@@ -271,6 +285,7 @@ window.__ModuleLoader__.load({
             root,
             expanded,
             selected,
+            refreshKey,
             onToggle: (rel) => {
               setExpanded(prev => {
                 const next = new Set(prev);
@@ -282,8 +297,14 @@ window.__ModuleLoader__.load({
           }),
           React.createElement("div", { style: STYLES.editorCol },
             React.createElement("div", { style: STYLES.row },
-              React.createElement("span", { style: STYLES.hint }, selected ? selected : "选择左侧文件开始编辑"),
-              React.createElement("button", { style: STYLES.button, onClick: newFile }, "新建文件"),
+              React.createElement("button", {
+                style: STYLES.button,
+                title: "重新扫描工作区文件",
+                onClick: () => setRefreshKey(k => k + 1)
+              }, "⟳ 刷新"),
+              React.createElement("button", { style: STYLES.button, onClick: newFile }, "＋ 新建文件"),
+              React.createElement("span", { style: { ...STYLES.hint, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } },
+                selected || "选择左侧文件开始编辑"),
               content && !content.binary && React.createElement("button", {
                 style: STYLES.buttonPrimary,
                 onClick: saveFile,
@@ -311,7 +332,7 @@ window.__ModuleLoader__.load({
     // ── 终端面板 ────────────────────────────────────────────────────
     function TerminalView(props) {
       const useProjection = props.useProjection;
-      const [lines, setLines] = React.useState([{ type: "sys", text: "DEEPHARNESS 终端 — 工作区根目录命令执行器" }]);
+      const [lines, setLines] = React.useState([{ type: "sys", text: "DEEPHARNESS 终端 — 工作区根目录命令执行器(PowerShell)" }]);
       const [value, setValue] = React.useState("");
       const [busy, setBusy] = React.useState(false);
       const [history, setHistory] = React.useState([]);
@@ -364,7 +385,7 @@ window.__ModuleLoader__.load({
           React.createElement("input", {
             style: STYLES.input,
             value: value,
-            placeholder: root ? ("在 " + root + " 下运行命令(Enter 执行)") : "输入命令…",
+            placeholder: root ? ("在 " + root + " 下运行(Enter 执行,↑↓ 历史)") : "输入命令…",
             spellCheck: false,
             disabled: busy,
             onChange: (e) => setValue(e.target.value),
@@ -385,12 +406,13 @@ window.__ModuleLoader__.load({
               }
             }
           }),
+          React.createElement("button", { style: STYLES.button, onClick: () => setLines([{ type: "sys", text: "— 已清屏 —" }]) }, "清屏"),
           React.createElement("button", { style: STYLES.buttonPrimary, disabled: busy, onClick: () => run(value) }, busy ? "运行中" : "运行")
         )
       );
     }
 
-    // ── 外观设置(设置 → 通用 → DEEPHARNESS 外观)───────────────────
+    // ── 外观系统 ────────────────────────────────────────────────────
     const FONT_CHOICES = [
       { id: "default", label: "默认字体" },
       { id: "Microsoft YaHei", label: "微软雅黑" },
@@ -399,84 +421,237 @@ window.__ModuleLoader__.load({
       { id: "Consolas", label: "等宽字体" }
     ];
     const GRADIENT_CHOICES = [
-      { id: "none", label: "无(跟随主题)" },
       { id: "nightblue", label: "暗夜蓝", css: "linear-gradient(160deg, #0F172A 0%, #16204A 55%, #1E3A8A 100%)" },
       { id: "aurora", label: "极光紫", css: "linear-gradient(160deg, #0F172A 0%, #312E81 50%, #6D28D9 100%)" },
       { id: "forest", label: "深林", css: "linear-gradient(160deg, #0A0F0D 0%, #064E3B 55%, #065F46 100%)" },
       { id: "solidblue", label: "纯色深蓝", css: "#16204A" }
     ];
     const BRAND_COLOR = "#16204A";
+    const DEFAULT_BG_NAME = "默认.jpg";
+    // 有背景时:侧栏(含顶栏标题行)/详情栏半透明毛玻璃,中间内容区半透明
+    const GLASS_CSS =
+      '[class*="sidebarCol"] { background: rgba(22,32,74,0.52) !important; ' +
+      'backdrop-filter: blur(18px) saturate(1.25) !important; -webkit-backdrop-filter: blur(18px) saturate(1.25) !important; }\n' +
+      '[class*="detailsCol"] { background: rgba(15,23,42,0.52) !important; ' +
+      'backdrop-filter: blur(18px) saturate(1.2) !important; -webkit-backdrop-filter: blur(18px) saturate(1.2) !important; }\n' +
+      '[class*="centerCol"] { background: rgba(13,18,35,0.78) !important; }';
 
-    // 应用外观(读取 localStorage,重进页面/重启服务后自动恢复)
+    function resolveBackground() {
+      const raw = lsGet("deepharness.background", null);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed.kind === "string") return parsed;
+        } catch { /* fall through */ }
+      }
+      // 出厂默认背景:仓库自带 assets/backgrounds/默认.jpg
+      return { kind: "image", name: DEFAULT_BG_NAME };
+    }
+
+    // 应用外观(读取 localStorage;返回 disposer 用于撤销令牌覆盖)
     function applyAppearance(theme) {
       const brand = lsGet("deepharness.brand", "on") !== "off";
       const font = lsGet("deepharness.font", "default");
-      const gradient = lsGet("deepharness.gradient", "none");
+      const bg = resolveBackground();
+      const disposers = [];
 
-      // 品牌色:主题令牌覆盖(侧栏 + 标题行)+ 兜底 CSS
+      let bgLayer = "";
+      if (bg.kind === "gradient") {
+        const g = GRADIENT_CHOICES.find(c => c.id === bg.id);
+        if (g) bgLayer = g.css;
+      } else if (bg.kind === "image" && bg.name) {
+        bgLayer = "url('" + API + "/background?name=" + encodeURIComponent(bg.name) + "') center/cover no-repeat fixed";
+      }
+
       const css = [];
-      if (brand) {
-        css.push(":root { --dsw-specific-sidebar-fill: " + BRAND_COLOR + "; }");
-        css.push("html, body { background-color: " + BRAND_COLOR + "; }");
+      if (bgLayer) {
+        css.push("html, body { background: " + bgLayer + "; background-color: #0B1220; }");
+        css.push(GLASS_CSS);
+      } else if (brand) {
+        css.push('[class*="sidebarCol"] { background: ' + BRAND_COLOR + ' !important; }');
+        css.push("html, body { background-color: #0B1220; }");
       }
-      if (gradient !== "none") {
-        const g = GRADIENT_CHOICES.find(c => c.id === gradient);
-        if (g) css.push("html, body { background: " + g.css + " fixed; }");
+      injectCSS("deep-harness-appearance-bg", css.join("\n"));
+
+      if (theme) {
+        const tokens = {};
+        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(13,18,35,0.8)", dark: "rgba(13,18,35,0.8)" };
+        if (brand) {
+          tokens["--dsw-specific-sidebar-fill"] = {
+            light: bgLayer ? "rgba(22,32,74,0.55)" : BRAND_COLOR,
+            dark: bgLayer ? "rgba(22,32,74,0.55)" : BRAND_COLOR
+          };
+        }
+        if (Object.keys(tokens).length > 0) {
+          try { disposers.push(theme.overrideTokens("deep-harness-appearance", tokens)); } catch { /* ignore */ }
+        }
       }
-      injectCSS("deep-harness-appearance-css", css.join("\n"));
 
       if (font !== "default") {
         injectCSS("deep-harness-appearance-font",
-          "body, button, input, textarea, select { font-family: \"" + font + "\", 'Microsoft YaHei', system-ui, sans-serif; }");
+          'body, button, input, textarea, select { font-family: "' + font + '", "Microsoft YaHei", system-ui, sans-serif; }');
       } else {
         injectCSS("deep-harness-appearance-font", "");
       }
 
-      if (theme && brand) {
-        try {
-          return theme.overrideTokens("deep-harness-appearance", {
-            "--dsw-specific-sidebar-fill": { light: BRAND_COLOR, dark: BRAND_COLOR }
-          });
-        } catch { /* ignore */ }
-      }
-      return null;
+      return () => {
+        for (const d of disposers) { try { d(); } catch { /* ignore */ } }
+      };
     }
 
+    // ── 背景图裁剪(固定 16:9)───────────────────────────────────────
+    const CROP_RATIO = 16 / 9;
+
+    function CropOverlay({ imageDataUrl, onCancel, onConfirm }) {
+      const [scale, setScale] = React.useState(1);
+      const [offset, setOffset] = React.useState({ x: 0, y: 0 });
+      const imgRef = React.useRef(null);
+      const areaRef = React.useRef(null);
+      const dragRef = React.useRef(null);
+
+      const onMouseDown = (e) => {
+        dragRef.current = { startX: e.clientX, startY: e.clientY, baseX: offset.x, baseY: offset.y };
+        e.preventDefault();
+      };
+      React.useEffect(() => {
+        const move = (e) => {
+          if (!dragRef.current) return;
+          setOffset({
+            x: dragRef.current.baseX + (e.clientX - dragRef.current.startX),
+            y: dragRef.current.baseY + (e.clientY - dragRef.current.startY)
+          });
+        };
+        const up = () => { dragRef.current = null; };
+        window.addEventListener("mousemove", move);
+        window.addEventListener("mouseup", up);
+        return () => {
+          window.removeEventListener("mousemove", move);
+          window.removeEventListener("mouseup", up);
+        };
+      }, []);
+
+      const doCrop = () => {
+        const img = imgRef.current;
+        const area = areaRef.current;
+        if (!img || !area) return;
+        const areaW = area.clientWidth, areaH = area.clientHeight;
+        const fit = Math.min(areaW / img.naturalWidth, areaH / img.naturalHeight) * scale;
+        const dispW = img.naturalWidth * fit, dispH = img.naturalHeight * fit;
+        const imgLeft = (areaW - dispW) / 2 + offset.x;
+        const imgTop = (areaH - dispH) / 2 + offset.y;
+        let boxW = Math.min(areaW * 0.72, areaH * 0.72 * CROP_RATIO);
+        let boxH = boxW / CROP_RATIO;
+        const boxLeft = (areaW - boxW) / 2, boxTop = (areaH - boxH) / 2;
+        let sx = (boxLeft - imgLeft) / fit;
+        let sy = (boxTop - imgTop) / fit;
+        let sw = boxW / fit;
+        let sh = boxH / fit;
+        sx = Math.max(0, Math.min(sx, img.naturalWidth - 1));
+        sy = Math.max(0, Math.min(sy, img.naturalHeight - 1));
+        sw = Math.min(sw, img.naturalWidth - sx);
+        sh = Math.min(sh, img.naturalHeight - sy);
+        if (sw <= 0 || sh <= 0) { window.alert("裁剪区域超出图片范围,请调整位置或缩小"); return; }
+        const canvas = document.createElement("canvas");
+        canvas.width = 1600;
+        canvas.height = Math.round(1600 / CROP_RATIO);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        onConfirm(canvas.toDataURL("image/jpeg", 0.9));
+      };
+
+      return React.createElement("div", {
+        style: {
+          position: "fixed", inset: 0, zIndex: 99999, display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", gap: 14,
+          background: "rgba(5,10,25,0.82)", backdropFilter: "blur(6px)",
+          fontFamily: "var(--dsh-font-family, inherit)"
+        }
+      },
+        React.createElement("div", { style: { color: "#E2E8F0", fontSize: 15, fontWeight: 600 } },
+          "裁剪背景图(固定 16:9,拖动图片调整位置)"),
+        React.createElement("div", {
+          ref: areaRef,
+          style: {
+            position: "relative", width: "min(92vw, 1000px)", height: "min(60vh, 520px)",
+            overflow: "hidden", borderRadius: 12, border: "1px solid #334155",
+            background: "#0B1220", cursor: "grab"
+          },
+          onMouseDown: onMouseDown
+        },
+          React.createElement("img", {
+            ref: imgRef,
+            src: imageDataUrl,
+            draggable: false,
+            style: {
+              position: "absolute",
+              left: "50%", top: "50%",
+              transform: "translate(-50%, -50%) translate(" + offset.x + "px, " + offset.y + "px) scale(" + scale + ")",
+              maxWidth: "none", maxHeight: "none",
+              pointerEvents: "none", userSelect: "none"
+            }
+          }),
+          React.createElement("div", {
+            style: {
+              position: "absolute", left: "50%", top: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "72%", aspectRatio: "16/9", maxHeight: "80%",
+              border: "2px solid #4D6BFE", borderRadius: 6, boxSizing: "border-box",
+              boxShadow: "0 0 0 9999px rgba(5,10,25,0.45)", pointerEvents: "none"
+            }
+          })
+        ),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, color: "#CBD5E1", fontSize: 13 } },
+          "缩放",
+          React.createElement("input", {
+            type: "range", min: 1, max: 4, step: 0.05, value: scale,
+            style: { width: 220 },
+            onChange: (e) => setScale(Number(e.target.value))
+          }),
+          scale.toFixed(2) + "×"
+        ),
+        React.createElement("div", { style: { display: "flex", gap: 10 } },
+          React.createElement("button", {
+            style: { ...STYLES.button, padding: "8px 26px", fontSize: 13 },
+            onClick: onCancel
+          }, "取消"),
+          React.createElement("button", {
+            style: { ...STYLES.buttonPrimary, padding: "8px 26px", fontSize: 13 },
+            onClick: doCrop
+          }, "确认裁剪并应用")
+        )
+      );
+    }
+
+    // ── 外观设置(设置 → 通用 → DEEPHARNESS 外观)───────────────────
     function AppearanceSettings() {
       const [brand, setBrand] = React.useState(lsGet("deepharness.brand", "on") !== "off");
       const [font, setFont] = React.useState(lsGet("deepharness.font", "default"));
-      const [gradient, setGradient] = React.useState(lsGet("deepharness.gradient", "none"));
+      const [bg, setBg] = React.useState(resolveBackground());
       const [fonts, setFonts] = React.useState([]);
+      const [backgrounds, setBackgrounds] = React.useState([]);
       const [msg, setMsg] = React.useState("");
-      const [themeDisposer, setThemeDisposer] = React.useState(null);
+      const [cropImage, setCropImage] = React.useState(null); // dataURL
+      const themeDisposerRef = React.useRef(null);
+
+      const reload = React.useCallback(() => {
+        if (themeDisposerRef.current) { try { themeDisposerRef.current(); } catch { /* ignore */ } }
+        themeDisposerRef.current = applyAppearance(window.__dshClientTheme || null);
+      }, []);
 
       React.useEffect(() => {
-        let dispose = null;
-        try {
-          const theme = window.__dshClientTheme;
-          dispose = applyAppearance(theme || null);
-        } catch { /* ignore */ }
-        setThemeDisposer(dispose);
-        return () => { if (dispose) { try { dispose(); } catch { /* ignore */ } } };
+        reload();
+        return () => { if (themeDisposerRef.current) { try { themeDisposerRef.current(); } catch { /* ignore */ } } };
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
 
       React.useEffect(() => {
         apiGet("/fonts").then(d => setFonts(d.fonts || [])).catch(() => setFonts([]));
+        apiGet("/backgrounds").then(d => setBackgrounds(d.backgrounds || [])).catch(() => setBackgrounds([]));
       }, []);
 
-      const reloadTheme = () => {
-        // 通过全局钩子获取 theme 服务(apply 阶段已缓存)
-        try {
-          if (themeDisposer) { try { themeDisposer(); } catch { /* ignore */ } }
-        } catch { /* ignore */ }
-        const dispose = applyAppearance(window.__dshClientTheme || null);
-        setThemeDisposer(dispose);
-      };
-
-      const setBrandV = (v) => { lsSet("deepharness.brand", v ? "on" : "off"); setBrand(v); reloadTheme(); };
-      const setFontV = (v) => { lsSet("deepharness.font", v); setFont(v); reloadTheme(); };
-      const setGradientV = (v) => { lsSet("deepharness.gradient", v); setGradient(v); reloadTheme(); };
+      const setBrandV = (v) => { lsSet("deepharness.brand", v ? "on" : "off"); setBrand(v); reload(); };
+      const setFontV = (v) => { lsSet("deepharness.font", v); setFont(v); reload(); };
+      const setBgV = (next) => { lsSet("deepharness.background", JSON.stringify(next)); setBg(next); reload(); };
 
       const applyFontFile = async (name) => {
         try {
@@ -487,9 +662,9 @@ window.__ModuleLoader__.load({
           await face.load();
           document.fonts.add(face);
           lsSet("deepharness.font", family);
-          lsSet("deepharness.customFonts", JSON.stringify([...JSON.parse(lsGet("deepharness.customFonts", "[]") || "[]"), family].filter((v, i, a) => a.indexOf(v) === i)));
           setFont(family);
           setMsg("已应用字体 " + name);
+          reload();
         } catch (err) {
           setMsg("字体应用失败: " + String(err.message || err));
         }
@@ -512,29 +687,94 @@ window.__ModuleLoader__.load({
         reader.readAsDataURL(file);
       };
 
-      const tier = pricingTier("deepseek-v4-flash");
+      const pickBackgroundFile = (file) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => setCropImage(String(reader.result));
+        reader.readAsDataURL(file);
+      };
 
-      return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14, padding: "16px 0" } },
-        React.createElement("div", { style: STYLES.row },
-          React.createElement("span", { style: STYLES.label }, "品牌顶栏色"),
-          React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" } },
-            React.createElement("input", { type: "checkbox", checked: brand, onChange: (e) => setBrandV(e.target.checked) }),
-            "固定 DEEPHARNESS 品牌深蓝(" + BRAND_COLOR + "),不随主题变化")
-        ),
-        React.createElement("div", { style: STYLES.row },
-          React.createElement("span", { style: STYLES.label }, "界面字体"),
-          React.createElement("select", { style: STYLES.select, value: font, onChange: (e) => setFontV(e.target.value) },
-            FONT_CHOICES.map(c => React.createElement("option", { key: c.id, value: c.id }, c.label))
+      const confirmCrop = async (dataUrl) => {
+        setCropImage(null);
+        const name = "background-" + Date.now() + ".jpg";
+        try {
+          const dataBase64 = dataUrl.split(",")[1] || "";
+          await apiPost("/background/upload", { name, dataBase64 });
+          const d = await apiGet("/backgrounds");
+          setBackgrounds(d.backgrounds || []);
+          setBgV({ kind: "image", name });
+          setMsg("✓ 背景图已裁剪并应用");
+        } catch (err) {
+          setMsg("背景图上传失败: " + String(err.message || err));
+        }
+      };
+
+      const tier = pricingTier("deepseek-v4-flash");
+      const bgKind = bg && bg.kind ? bg.kind : "none";
+      const bgImageName = bgKind === "image" ? bg.name : "";
+
+      return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, maxWidth: 760 } },
+
+        React.createElement("div", { style: STYLES.section },
+          React.createElement("span", { style: STYLES.sectionTitle }, "品牌与字体"),
+          React.createElement("div", { style: STYLES.row },
+            React.createElement("span", { style: STYLES.label }, "品牌顶栏色"),
+            React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" } },
+              React.createElement("input", { type: "checkbox", checked: brand, onChange: (e) => setBrandV(e.target.checked) }),
+              "固定 DEEPHARNESS 品牌深蓝(" + BRAND_COLOR + "),不随主题变化")
+          ),
+          React.createElement("div", { style: STYLES.row },
+            React.createElement("span", { style: STYLES.label }, "界面字体"),
+            React.createElement("select", { style: STYLES.select, value: font, onChange: (e) => setFontV(e.target.value) },
+              FONT_CHOICES.map(c => React.createElement("option", { key: c.id, value: c.id }, c.label))
+            )
           )
         ),
-        React.createElement("div", { style: STYLES.row },
-          React.createElement("span", { style: STYLES.label }, "渐变背景"),
-          React.createElement("select", { style: STYLES.select, value: gradient, onChange: (e) => setGradientV(e.target.value) },
-            GRADIENT_CHOICES.map(c => React.createElement("option", { key: c.id, value: c.id }, c.label))
+
+        React.createElement("div", { style: STYLES.section },
+          React.createElement("span", { style: STYLES.sectionTitle }, "背景(渐变 / 图片)"),
+          React.createElement("div", { style: STYLES.row },
+            React.createElement("span", { style: STYLES.label }, "渐变背景"),
+            React.createElement("select", {
+              style: STYLES.select,
+              value: bgKind === "gradient" ? bg.id : "none",
+              onChange: (e) => {
+                const v = e.target.value;
+                setBgV(v === "none" ? { kind: "none" } : { kind: "gradient", id: v });
+              }
+            },
+              React.createElement("option", { value: "none" }, "无(跟随主题)"),
+              GRADIENT_CHOICES.map(c => React.createElement("option", { key: c.id, value: c.id }, c.label))
+            ),
+            React.createElement("span", { style: STYLES.hint }, "有背景时,顶栏/侧栏自动半透明毛玻璃")
+          ),
+          React.createElement("div", { style: STYLES.row },
+            React.createElement("span", { style: STYLES.label }, "背景图片"),
+            React.createElement("label", { style: { ...STYLES.button, display: "inline-block" } },
+              "上传并裁剪(16:9)…",
+              React.createElement("input", {
+                type: "file", accept: ".jpg,.jpeg,.png,.webp,.gif", style: { display: "none" },
+                onChange: (e) => pickBackgroundFile(e.target.files && e.target.files[0])
+              })
+            ),
+            React.createElement("button", {
+              style: bgKind === "none" ? STYLES.button : STYLES.buttonPrimary,
+              onClick: () => setBgV({ kind: "none" })
+            }, "无背景"),
+            bgKind === "image" && React.createElement("span", { style: STYLES.hint }, "当前: " + bgImageName)
+          ),
+          backgrounds.length > 0 && React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
+            backgrounds.map(b => React.createElement("button", {
+              key: b.name,
+              style: bgKind === "image" && bgImageName === b.name ? STYLES.buttonPrimary : STYLES.button,
+              title: (b.bytes / 1024).toFixed(1) + " KB",
+              onClick: () => setBgV({ kind: "image", name: b.name })
+            }, b.name))
           )
         ),
-        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
-          React.createElement("span", { style: STYLES.label }, "导入字体"),
+
+        React.createElement("div", { style: STYLES.section },
+          React.createElement("span", { style: STYLES.sectionTitle }, "导入字体"),
           React.createElement("div", { style: STYLES.row },
             React.createElement("label", { style: { ...STYLES.button, display: "inline-block" } },
               "上传 .ttf/.woff2…",
@@ -553,10 +793,21 @@ window.__ModuleLoader__.load({
             }, f.name))
           )
         ),
-        React.createElement("div", { style: STYLES.hint },
-          "费用估算定价:当前时段 = " + tier.label + "。高峰(北京时间 9:00-12:00、14:00-18:00)为基准价,空闲时段半价;2026-08-17 前按旧价。参考官方定价页。"
+
+        React.createElement("div", { style: STYLES.section },
+          React.createElement("span", { style: STYLES.sectionTitle }, "费用估算说明"),
+          React.createElement("div", { style: STYLES.hint },
+            "当前时段 = " + tier.label + "。高峰(北京时间 9:00-12:00、14:00-18:00)为基准价,空闲时段半价;2026-08-17 前按旧价。参考 DeepSeek 官方定价页。"
+          )
         ),
-        msg && React.createElement("div", { style: STYLES.hint }, msg)
+
+        msg && React.createElement("div", { style: STYLES.hint }, msg),
+
+        cropImage && React.createElement(CropOverlay, {
+          imageDataUrl: cropImage,
+          onCancel: () => setCropImage(null),
+          onConfirm: confirmCrop
+        })
       );
     }
 
@@ -595,7 +846,7 @@ window.__ModuleLoader__.load({
         order: 30
       }, AppearanceSettings));
 
-      // 启动即应用已保存的外观(品牌色/字体/渐变),重启后自动恢复
+      // 启动即应用已保存的外观(品牌色/字体/背景),重启后自动恢复
       ctx.effect(() => {
         const dispose = applyAppearance(theme);
         return () => { if (dispose) { try { dispose(); } catch { /* ignore */ } } };

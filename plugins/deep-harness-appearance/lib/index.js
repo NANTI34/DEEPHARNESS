@@ -19,6 +19,8 @@ const MAX_TREE_ENTRIES = 600
 const MAX_COMMAND_LEN = 8000
 const MAX_EXEC_MS = 300000
 const FONT_EXTS = new Set(['.ttf', '.otf', '.woff', '.woff2'])
+const BG_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif'])
+const BG_MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif' }
 // 文件树默认隐藏的目录/文件
 const IGNORED_NAMES = new Set([
   'node_modules', '.git', '.svn', '.hg', '.venv', '.idea', '.vscode',
@@ -177,6 +179,36 @@ export function apply(ctx) {
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh'))
   }
 
+  // ── 背景图 ──────────────────────────────────────────────────────────
+  const bgDirs = [path.join(root, 'assets', 'backgrounds'), path.join(dshHome, 'backgrounds')]
+
+  function findBgFile(name) {
+    if (typeof name !== 'string' || !name || name.includes('/') || name.includes('\\') || name.includes('..')) return null
+    const ext = path.extname(name).toLowerCase()
+    if (!BG_EXTS.has(ext)) return null
+    for (const dir of bgDirs) {
+      const file = path.join(dir, name)
+      try {
+        if (existsSync(file)) return file
+      } catch { /* ignore */ }
+    }
+    return null
+  }
+
+  function listBackgrounds() {
+    const seen = new Map()
+    for (const dir of bgDirs) {
+      let names = []
+      try { names = readdirSync(dir) } catch { continue }
+      for (const name of names) {
+        if (!BG_EXTS.has(path.extname(name).toLowerCase())) continue
+        if (seen.has(name)) continue
+        seen.set(name, { name, bytes: (() => { try { return statSync(path.join(dir, name)).size } catch { return 0 } })() })
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh'))
+  }
+
   // ── 路由注册 ────────────────────────────────────────────────────────
   const disposers = []
   const route = (method, pathname, handler) => {
@@ -220,7 +252,7 @@ export function apply(ctx) {
     sendJson(res, 200, {
       ok: true,
       plugin: name,
-      version: '1.0.0',
+      version: '1.1.0',
       root,
       dshHome,
       fontsDirs,
@@ -299,6 +331,42 @@ export function apply(ctx) {
     await fsp.mkdir(dir, { recursive: true })
     const data = Buffer.from(String(body.dataBase64 || ''), 'base64')
     if (data.length === 0) throw new Error('empty font data')
+    await fsp.writeFile(path.join(dir, name), data)
+    sendJson(res, 200, { ok: true, name, bytes: data.length })
+  })
+
+  route('GET', API_PREFIX + '/backgrounds', async (_req, res) => {
+    sendJson(res, 200, { ok: true, backgrounds: listBackgrounds() })
+  })
+
+  // 原始图片字节(供 CSS background-image url() 直接引用)
+  route('GET', API_PREFIX + '/background', async (req, res) => {
+    const url = new URL(req.url, 'http://x')
+    const name = url.searchParams.get('name')
+    const file = findBgFile(name)
+    if (!file) throw new Error('background not found')
+    const data = await fsp.readFile(file)
+    const mime = BG_MIME[path.extname(file).toLowerCase()] || 'image/jpeg'
+    res.writeHead(200, {
+      'content-type': mime,
+      'cache-control': 'no-store',
+      'content-length': data.length
+    })
+    res.end(data)
+  })
+
+  prefix('POST', API_PREFIX + '/background/upload', async (req, res) => {
+    const body = JSON.parse((await readBody(req, 64 * 1024 * 1024)).toString('utf8') || '{}')
+    let name = String(body.name || '')
+    if (!name || name.includes('/') || name.includes('\\') || name.includes('..')) throw new Error('invalid background name')
+    const ext = path.extname(name).toLowerCase()
+    if (!BG_EXTS.has(ext)) throw new Error('unsupported image format')
+    // 裁剪产物统一为 JPEG;若原始格式保留,则去掉多余扩展名标记
+    name = path.basename(name, ext) + '.jpg'
+    const dir = path.join(dshHome, 'backgrounds')
+    await fsp.mkdir(dir, { recursive: true })
+    const data = Buffer.from(String(body.dataBase64 || ''), 'base64')
+    if (data.length === 0) throw new Error('empty image data')
     await fsp.writeFile(path.join(dir, name), data)
     sendJson(res, 200, { ok: true, name, bytes: data.length })
   })

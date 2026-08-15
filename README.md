@@ -121,8 +121,10 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 | `%USERPROFILE%\.dsh\profiles\web` | Web 工作台配置文件(含常驻插件加载项) |
 | `%USERPROFILE%\.dsh\app` | 桌面壳状态:窗口位置、启动日志、冒烟证据 |
 | `%USERPROFILE%\.dsh\sessions` | 会话记录(按工作区目录分文件夹存放) |
+| `%USERPROFILE%\.dsh\backgrounds` | 上传的背景图(裁剪产物) |
 | `logs\server.log` / `logs\server.err.log` | 服务运行日志 / 错误日志 |
 | `fonts\` | 外观插件"导入字体"的字体文件目录(仓库侧) |
+| `assets\backgrounds\` | 出厂默认背景图(仓库侧) |
 
 ## 🎨 工作台增强(常驻插件,重启不丢)
 
@@ -132,6 +134,8 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 - **字体风格** — 默认 / 微软雅黑 / 宋体 / 楷体 / 等宽 一键切换,选择自动记忆
 - **导入字体** — 将 `.ttf` / `.woff2` 等放入 `fonts\` 目录,或在设置页直接上传(保存到 `%USERPROFILE%\.dsh\fonts`),一键应用
 - **渐变背景预设** — 暗夜蓝 / 极光紫 / 深林 / 纯色深蓝,选择自动记忆
+- **图片背景 + 16:9 裁剪** — 设置页上传任意图片,弹出固定 16:9 比例裁剪框(拖动/缩放),确认后自动应用并保存到 `%USERPROFILE%\.dsh\backgrounds`;仓库自带 `assets\backgrounds\默认.jpg`(2560×1440)作为**出厂默认背景**
+- **半透明毛玻璃** — 有背景(渐变或图片)时,顶栏 / 侧栏 / 详情栏自动半透明 + 背景模糊(`backdrop-filter`),中间聊天区保持可读
 - **费用统计** — 「文件」「终端」标签页顶部实时显示本会话费用估算:
   - 基于会话投影中的真实 token 用量(输入 / 缓存命中 / 输出)
   - **自动适配 2026-08-17 峰谷定价**:8.17 前按旧价;之后按北京时间高峰(9:00-12:00、14:00-18:00,基准价)与空闲时段(半价)自动切换
@@ -139,7 +143,7 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 - **文件视图** — 会话视图栏「文件」标签:左侧工作区文件树(层级连线、自动隐藏 `node_modules`/`.git` 等),点击文件右侧即时预览与编辑,支持保存写回与新建文件
 - **终端面板** — 会话视图栏「终端」标签:工作区根目录下的命令执行器(PowerShell),快速运行命令并查看输出
 
-> 插件工作原理:host 半在 `webServer` 上注册 `/deepharness/api/*` 路由(文件树/读写、命令执行、字体托管),浏览器半通过 DSH 的 `dsh.client` 机制自动加载(会话视图栏标签 + 设置项)。文件路径做了工作区包含校验,越界请求一律拒绝。
+> 插件工作原理:host 半在 `webServer` 上注册 `/deepharness/api/*` 路由(文件树/读写、命令执行、字体与背景图托管),浏览器半通过 DSH 的 `dsh.client` 机制自动加载(会话视图栏标签 + 设置项)。背景生效机制:背景承载在 `html/body`,同时用主题令牌把框架/侧栏变为半透明 + `backdrop-filter` 毛玻璃。文件路径做了工作区包含校验,越界请求一律拒绝。
 >
 > 手动安装/卸载(install.ps1 已自动完成):
 > ```powershell
@@ -169,9 +173,11 @@ DEEPHARNESS/
 │  └─ package.json             # Electron 依赖
 ├─ plugins/
 │  └─ deep-harness-appearance/ # 常驻增强插件(文件视图/终端/外观/费用)
-│     ├─ lib/index.js          # host 半:/deepharness/api/* 路由
-│     ├─ lib/client.js         # 浏览器半:会话视图标签 + 设置项
+│     ├─ lib/index.js          # host 半:/deepharness/api/* 路由(含背景图托管)
+│     ├─ lib/client.js         # 浏览器半:会话视图标签 + 设置项 + 16:9 背景裁剪
 │     └─ test/                 # 契约测试(client-bundle.test.cjs)
+├─ assets/
+│  └─ backgrounds/默认.jpg     # 出厂默认背景(16:9 裁剪,2560×1440)
 ├─ launcher/
 │  ├─ DEEPHARNESS.ps1          # 启动器(端口探测 + 后台启动 + 打开界面)
 │  ├─ start-hidden.vbs         # 无控制台窗口调用(wscript)
