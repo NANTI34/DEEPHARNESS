@@ -434,10 +434,12 @@ window.__ModuleLoader__.load({
       };
       const saveFile = async () => {
         if (!content) return;
+        const target = content.path || content.rel;
+        if (!target) { setMsg("保存失败: 缺少文件路径"); return; }
         try {
-          await apiPost("/write", { path: content.rel, content: editing });
+          await apiPost("/write", { path: target, content: editing });
           setDirty(false);
-          setMsg("✓ 已保存 " + content.rel);
+          setMsg("✓ 已保存 " + target);
           setRefreshKey(k => k + 1);
         } catch (err) {
           setMsg("保存失败: " + String(err.message || err));
@@ -496,7 +498,7 @@ window.__ModuleLoader__.load({
                   "二进制文件(" + (content.size / 1024).toFixed(1) + " KB),不支持文本编辑")
                 : React.createElement(CodeEditor, {
                   value: editing,
-                  language: langFor(content.rel),
+                  language: langFor(content.path || content.rel),
                   placeholder: content.truncated ? "文件过大已截断(仅显示前 2MB)" : "",
                   onChange: (v) => { setEditing(v); setDirty(true); }
                 }),
@@ -1118,6 +1120,171 @@ window.__ModuleLoader__.load({
       );
     }
 
+    // ── 统计标签页:会话 token/耗时/费用明细 ─────────────────────────
+    function StatsView(props) {
+      const useProjection = props.useProjection;
+      let usage = null, stats = null;
+      try {
+        usage = useProjection ? useProjection("tokenUsage") : null;
+        stats = useProjection ? useProjection("sessionStats") : null;
+      } catch { /* ignore */ }
+      const fmtMs = (ms) => ms == null ? "—" : (ms >= 60000 ? (ms / 60000).toFixed(1) + " 分" : Math.round(ms) + " 毫秒");
+      const row = (label, value) => React.createElement("div", {
+        key: label,
+        style: {
+          display: "flex", justifyContent: "space-between", gap: 12,
+          padding: "7px 10px", borderRadius: 8,
+          background: "var(--dsw-alias-bg-layer-1)",
+          fontSize: 13
+        }
+      },
+        React.createElement("span", { style: { color: "var(--dsw-alias-label-secondary)" } }, label),
+        React.createElement("span", { style: { color: "var(--dsw-alias-label-primary)", fontWeight: 600, fontFamily: "Consolas, monospace" } }, value)
+      );
+      const items = [];
+      if (stats) {
+        items.push(row("对话轮次", String(stats.turns ?? 0)));
+        items.push(row("执行步骤", String(stats.steps ?? 0)));
+        items.push(row("LLM 耗时", fmtMs(stats.llmMs)));
+        items.push(row("工具调用耗时", fmtMs(stats.toolMs)));
+        items.push(row("输出 tokens", formatTokens(stats.decodeTokens ?? 0)));
+      }
+      if (usage) {
+        items.push(row("输入 tokens(未命中缓存)", formatTokens(usage.uncachedInputTokens ?? 0)));
+        items.push(row("缓存命中 tokens", formatTokens(usage.cacheReadTokens ?? 0)));
+        items.push(row("输出 tokens", formatTokens(usage.outputTokens ?? 0)));
+        const flash = estimateCost(usage, "deepseek-v4-flash");
+        const pro = estimateCost(usage, "deepseek-v4-pro");
+        const tier = pricingTier("deepseek-v4-flash");
+        items.push(row("费用估算(flash)", "¥" + flash.cost.toFixed(4)));
+        items.push(row("费用估算(pro)", "¥" + pro.cost.toFixed(4)));
+        items.push(row("当前定价时段", tier.label));
+      }
+      if (items.length === 0) {
+        return React.createElement("div", { style: STYLES.panel },
+          React.createElement("div", { style: { ...STYLES.hint, textAlign: "center", paddingTop: 24 } }, "暂无会话数据"));
+      }
+      return React.createElement("div", { style: { ...STYLES.panel, gap: 6, maxWidth: 720 } },
+        React.createElement("div", { style: { fontSize: 13, color: "var(--dsw-alias-label-tertiary)", paddingBottom: 4 } },
+          "本会话统计(真实用量,随对话实时更新)"),
+        items
+      );
+    }
+
+    // ── 技能标签页:浏览 DSH 技能库 ──────────────────────────────────
+    function SkillsView() {
+      const [skills, setSkills] = React.useState([]);
+      const [selected, setSelected] = React.useState(null); // {name, content}
+      const [msg, setMsg] = React.useState("");
+      React.useEffect(() => {
+        apiGet("/skills").then(d => setSkills(d.skills || [])).catch(() => setSkills([]));
+      }, []);
+      const open = async (s) => {
+        try {
+          const d = await apiGet("/skill?path=" + encodeURIComponent(s.path));
+          setSelected({ name: d.name, content: d.content, truncated: d.truncated });
+        } catch (err) {
+          setMsg(String(err.message || err));
+        }
+      };
+      return React.createElement("div", { style: STYLES.panel },
+        React.createElement("div", { style: { fontSize: 13, color: "var(--dsw-alias-label-tertiary)" } },
+          "技能库:内置 Agent 预设与本地技能,点击查看 SKILL.md"),
+        React.createElement("div", { style: { ...STYLES.split, flex: 1, minHeight: 0 } },
+          React.createElement("div", {
+            style: {
+              width: "38%", minWidth: 200, maxWidth: 380, overflowY: "auto",
+              border: "1px solid var(--dsw-alias-border-l2)", borderRadius: 8, padding: 4
+            }
+          },
+            skills.length === 0 && React.createElement("div", { style: { ...STYLES.hint, padding: 12 } }, "未发现技能"),
+            skills.map(s => React.createElement("div", {
+              key: s.name,
+              style: {
+                padding: "7px 10px", borderRadius: 6, cursor: "pointer", marginBottom: 2,
+                background: selected && selected.name === s.name ? "var(--dsw-alias-bg-layer-1)" : "transparent",
+                border: selected && selected.name === s.name ? "1px solid #4D6BFE" : "1px solid transparent"
+              },
+              onClick: () => open(s)
+            },
+              React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: "var(--dsw-alias-label-primary)" } },
+                s.name),
+              React.createElement("div", { style: { fontSize: 11.5, color: "var(--dsw-alias-label-tertiary)", marginTop: 2 } },
+                (s.preset || "local") + (s.description ? " · " + s.description.slice(0, 80) : ""))
+            ))
+          ),
+          React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 } },
+            selected === null
+              ? React.createElement("div", { style: { ...STYLES.hint, padding: 12 } }, "← 从左侧选择技能查看说明")
+              : React.createElement("div", {
+                style: {
+                  flex: 1, minHeight: 0, overflowY: "auto", borderRadius: 8, padding: "10px 12px",
+                  background: "#0F172A", color: "#D1D5DB",
+                  fontFamily: "Consolas, 'Cascadia Code', monospace", fontSize: 12, lineHeight: 1.5,
+                  whiteSpace: "pre-wrap", wordBreak: "break-all",
+                  border: "1px solid var(--dsw-alias-border-l2)"
+                }
+              },
+                selected.name + (selected.truncated ? "(已截断)" : "") + "\n\n" + selected.content),
+            msg && React.createElement("div", { style: STYLES.hint }, msg)
+          )
+        )
+      );
+    }
+
+    // ── 环境标签页:版本/路径/诊断信息 ────────────────────────────────
+    function EnvView() {
+      const [info, setInfo] = React.useState(null);
+      const [msg, setMsg] = React.useState("");
+      React.useEffect(() => {
+        apiGet("/status").then(d => setInfo(d)).catch(() => setInfo(null));
+      }, []);
+      const row = (label, value) => React.createElement("div", {
+        key: label,
+        style: {
+          display: "flex", justifyContent: "space-between", gap: 12,
+          padding: "7px 10px", borderRadius: 8,
+          background: "var(--dsw-alias-bg-layer-1)", fontSize: 13
+        }
+      },
+        React.createElement("span", { style: { color: "var(--dsw-alias-label-secondary)", flex: "none" } }, label),
+        React.createElement("span", {
+          style: { color: "var(--dsw-alias-label-primary)", fontFamily: "Consolas, monospace", fontSize: 12, textAlign: "right", wordBreak: "break-all" }
+        }, value)
+      );
+      const items = [];
+      if (info) {
+        items.push(row("增强插件版本", "v" + (info.version || "?")));
+        items.push(row("工作区根目录", info.root));
+        items.push(row("数据目录", info.dshHome));
+        items.push(row("平台 / Node", info.platform + " / " + (info.node || "?")));
+        items.push(row("运行端口", String(window.location.port || 3080)));
+        items.push(row("当前背景", (function () {
+          const bg = resolveBackground();
+          return bg.kind === "image" ? bg.name : bg.kind === "gradient" ? bg.id : "无";
+        })()));
+        items.push(row("品牌色", lsGet("deepharness.brand", "on") !== "off" ? lsGet("deepharness.brandColor", "#16204A") : "关闭"));
+        items.push(row("运行环境", typeof window.__dshDesktop !== "undefined" ? "桌面应用" : "浏览器"));
+      }
+      const copyDiag = async () => {
+        try {
+          const diag = { at: new Date().toISOString(), info, bg: resolveBackground(), brand: lsGet("deepharness.brand", "on"), brandColor: lsGet("deepharness.brandColor", null), font: lsGet("deepharness.font", "default") };
+          await navigator.clipboard.writeText(JSON.stringify(diag, null, 2));
+          setMsg("✓ 诊断信息已复制到剪贴板");
+        } catch {
+          setMsg("复制失败(剪贴板不可用)");
+        }
+      };
+      return React.createElement("div", { style: { ...STYLES.panel, gap: 6, maxWidth: 720 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+          React.createElement("div", { style: { fontSize: 13, color: "var(--dsw-alias-label-tertiary)", flex: 1 } }, "环境与诊断信息"),
+          React.createElement("button", { style: STYLES.button, onClick: copyDiag }, "复制诊断")
+        ),
+        items.length ? items : React.createElement("div", { style: STYLES.hint }, "加载中…"),
+        msg && React.createElement("div", { style: STYLES.hint }, msg)
+      );
+    }
+
     // ── 插件主体 ────────────────────────────────────────────────────
     const inject = ["slots", "theme"];
 
@@ -1145,6 +1312,33 @@ window.__ModuleLoader__.load({
         label: () => "终端",
         inject: (sessionId) => ({ sessionId })
       }, TerminalView));
+
+      // 会话视图栏:「统计」标签(会话 token/耗时/费用明细)
+      ctx.slots.inject("conversation.view", () => slots.register({
+        name: "conversation.view",
+        id: "stats",
+        order: 40,
+        label: () => "统计",
+        inject: (sessionId) => ({ sessionId })
+      }, StatsView));
+
+      // 会话视图栏:「技能」标签(技能库浏览)
+      ctx.slots.inject("conversation.view", () => slots.register({
+        name: "conversation.view",
+        id: "skills",
+        order: 50,
+        label: () => "技能",
+        inject: (sessionId) => ({ sessionId })
+      }, SkillsView));
+
+      // 会话视图栏:「环境」标签(版本/路径/诊断)
+      ctx.slots.inject("conversation.view", () => slots.register({
+        name: "conversation.view",
+        id: "env",
+        order: 60,
+        label: () => "环境",
+        inject: (sessionId) => ({ sessionId })
+      }, EnvView));
 
       // 设置 → 独立区块「DEEPHARNESS 外观」(左侧导航 + 右侧全宽内容区)
       ctx.slots.inject("settings.section", () => slots.register({

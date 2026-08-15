@@ -5,7 +5,7 @@
 //   字体托管(仓库 fonts\ 目录 + %USERPROFILE%\.dsh\fonts)
 // 随服务启动自动加载(由 install.ps1 通过 `dsh plugin --profile web add` 安装)。
 import { execFile } from 'node:child_process'
-import { promises as fsp, existsSync, readdirSync, statSync } from 'node:fs'
+import { promises as fsp, existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 
@@ -214,6 +214,51 @@ export function apply(ctx) {
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh'))
   }
 
+  // ── 技能目录(内置预设 + 用户目录)──────────────────────────────────
+  const skillRoots = [
+    path.join(root, 'app', 'config', 'agent-presets'),
+    path.join(dshHome, 'skills')
+  ]
+
+  function listSkills() {
+    const out = []
+    const seen = new Set()
+    for (const base of skillRoots) {
+      if (!existsSync(base)) continue
+      let presets = []
+      try { presets = readdirSync(base) } catch { continue }
+      for (const preset of presets) {
+        const skillsDir = path.join(base, preset, 'skills')
+        if (!existsSync(skillsDir)) continue
+        let names = []
+        try { names = readdirSync(skillsDir) } catch { continue }
+        for (const name of names) {
+          if (seen.has(name)) continue
+          const skillDir = path.join(skillsDir, name)
+          const md = path.join(skillDir, 'SKILL.md')
+          if (!existsSync(md)) continue
+          let description = ''
+          try {
+            const text = readFileSync(md, 'utf8').slice(0, 2000)
+            const fm = /^---\s*\nname:\s*(.+)\s*\ndescription:\s*(.+?)\s*\n---/s.exec(text)
+            if (fm) description = fm[2].trim()
+          } catch { /* ignore */ }
+          seen.add(name)
+          out.push({ name, preset, description, path: skillDir })
+        }
+      }
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name, 'zh'))
+  }
+
+  function findSkillDir(relPath) {
+    const abs = path.resolve(relPath || '')
+    for (const base of skillRoots) {
+      if (abs === base || abs.startsWith(base + path.sep)) return abs
+    }
+    return null
+  }
+
   // ── 路由注册 ────────────────────────────────────────────────────────
   const disposers = []
   const route = (method, pathname, handler) => {
@@ -257,7 +302,7 @@ export function apply(ctx) {
     sendJson(res, 200, {
       ok: true,
       plugin: name,
-      version: '1.5.1',
+      version: '1.6.0',
       root,
       dshHome,
       fontsDirs,
@@ -378,8 +423,7 @@ export function apply(ctx) {
   })
 
   // 删除用户上传的背景图(出厂自带 repo 目录的图不可删)
-  prefix('POST', API_PREFIX + '/background/delete', async (req, res) => {
-    const body = JSON.parse((await readBody(req)).toString('utf8') || '{}')
+  prefix('POST', API_PREFIX + '/background/delete', async (req, res) => {    const body = JSON.parse((await readBody(req)).toString('utf8') || '{}')
     const name = String(body.name || '')
     if (!name || name.includes('/') || name.includes('\\') || name.includes('..')) throw new Error('invalid background name')
     const file = findBgFile(name)
@@ -390,6 +434,26 @@ export function apply(ctx) {
     }
     await fsp.unlink(file).catch(() => { throw new Error('删除失败') })
     sendJson(res, 200, { ok: true, name })
+  })
+
+  route('GET', API_PREFIX + '/skills', async (_req, res) => {
+    sendJson(res, 200, { ok: true, skills: listSkills() })
+  })
+
+  route('GET', API_PREFIX + '/skill', async (req, res) => {
+    const url = new URL(req.url, 'http://x')
+    const skillDir = findSkillDir(url.searchParams.get('path'))
+    if (!skillDir) throw new Error('skill not found')
+    const md = path.join(skillDir, 'SKILL.md')
+    if (!existsSync(md)) throw new Error('SKILL.md not found')
+    const text = await fsp.readFile(md, 'utf8')
+    sendJson(res, 200, {
+      ok: true,
+      name: path.basename(skillDir),
+      bytes: text.length,
+      content: text.length > 128 * 1024 ? text.slice(0, 128 * 1024) : text,
+      truncated: text.length > 128 * 1024
+    })
   })
 
   prefix('POST', API_PREFIX + '/exec', async (req, res) => {
