@@ -615,12 +615,12 @@ window.__ModuleLoader__.load({
     function glassCss(brandColor) {
       const rgb = hexToRgb(brandColor);
       const rgba = (a) => "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + "," + a + ")";
-      return '[class*="sidebarCol"] { background: ' + rgba(0.42) + " !important; " +
-        'backdrop-filter: blur(16px) saturate(1.3) !important; -webkit-backdrop-filter: blur(16px) saturate(1.3) !important; }\n' +
-        '[class*="detailsCol"] { background: rgba(15,23,42,0.38) !important; ' +
-        'backdrop-filter: blur(16px) saturate(1.2) !important; -webkit-backdrop-filter: blur(16px) saturate(1.2) !important; }\n' +
-        '[class*="centerCol"] { background: rgba(10,15,30,0.55) !important; }\n' +
-        '[class*="sidebarCol"] [class*="_brand"] { background: ' + rgba(0.62) + " !important; }";
+      return '[class*="sidebarCol"] { background: ' + rgba(0.45) + " !important; " +
+        'backdrop-filter: blur(14px) saturate(1.3) !important; -webkit-backdrop-filter: blur(14px) saturate(1.3) !important; }\n' +
+        '[class*="detailsCol"] { background: rgba(15,23,42,0.35) !important; ' +
+        'backdrop-filter: blur(14px) saturate(1.2) !important; -webkit-backdrop-filter: blur(14px) saturate(1.2) !important; }\n' +
+        '[class*="centerCol"] { background: rgba(8,12,25,0.42) !important; }\n' +
+        '[class*="sidebarCol"] [class*="_brand"] { background: ' + rgba(0.6) + " !important; }";
     }
 
     // 背景选择:新键优先;迁移旧版遗留(gradient 存于 background 键出现之前);
@@ -672,7 +672,7 @@ window.__ModuleLoader__.load({
 
       if (theme) {
         const tokens = {};
-        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(10,15,30,0.55)", dark: "rgba(10,15,30,0.55)" };
+        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(8,12,25,0.4)", dark: "rgba(8,12,25,0.4)" };
         if (brand) {
           tokens["--dsw-specific-sidebar-fill"] = {
             light: bgLayer ? withAlpha(sidebarColor, 0.5) : sidebarColor,
