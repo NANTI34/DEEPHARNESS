@@ -10,9 +10,14 @@ const code = fs.readFileSync(path.join(__dirname, '..', 'lib', 'client.js'), 'ut
 
 // ── DOM/localStorage 桩 ─────────────────────────────────────────────
 const storage = new Map()
+// 模拟旧版遗留 localStorage:gradient 旧键存在、无 background 新键、brand=off
+storage.set('deepharness.gradient', 'forest')
+storage.set('deepharness.brand', 'off')
+storage.set('deepharness.font', 'default')
 const localStorage = {
   getItem: (k) => (storage.has(k) ? storage.get(k) : null),
-  setItem: (k, v) => storage.set(k, String(v))
+  setItem: (k, v) => storage.set(k, String(v)),
+  removeItem: (k) => storage.delete(k)
 }
 const styleEls = new Map()
 const document = {
@@ -76,7 +81,7 @@ const fakeCtx = {
       return () => {}
     }
   },
-  effect: () => {}
+  effect: (cb) => { const dispose = cb(); return () => { if (typeof dispose === 'function') dispose() } }
 }
 mod.apply(fakeCtx)
 
@@ -97,6 +102,12 @@ assert.strictEqual(settingsSections.length, 1, 'one settings.section expected')
 assert.strictEqual(settingsSections[0].reg.id, 'deepharness-appearance')
 assert.strictEqual(typeof settingsSections[0].reg.label, 'function')
 assert.ok(settingsSections[0].reg.label().length > 0, 'section nav label required')
+
+// 旧版遗留迁移:apply 时 resolveBackground 应将 gradient=forest 迁移为 background 新键
+const migrated = JSON.parse(storage.get('deepharness.background'))
+assert.strictEqual(migrated.kind, 'gradient', 'legacy gradient must migrate to background')
+assert.strictEqual(migrated.id, 'forest', 'legacy gradient id preserved')
+console.log('legacy migration OK: gradient=forest -> background=' + storage.get('deepharness.background'))
 
 console.log('slot registrations OK:')
 for (const r of slotRegs) console.log('  -', r.name, '->', r.reg.id, r.reg.order)

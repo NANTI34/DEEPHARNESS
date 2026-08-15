@@ -611,15 +611,20 @@ window.__ModuleLoader__.load({
     }
 
     // 有背景时:侧栏(含顶栏标题行)/详情栏半透明毛玻璃,中间内容区半透明
-    function glassCss(brand, sidebar) {
-      return '[class*="sidebarCol"] { background: ' + withAlpha(sidebar, 0.52) + " !important; " +
-        'backdrop-filter: blur(18px) saturate(1.25) !important; -webkit-backdrop-filter: blur(18px) saturate(1.25) !important; }\n' +
-        '[class*="detailsCol"] { background: ' + withAlpha(sidebar, 0.5) + " !important; " +
-        'backdrop-filter: blur(18px) saturate(1.2) !important; -webkit-backdrop-filter: blur(18px) saturate(1.2) !important; }\n' +
-        '[class*="centerCol"] { background: rgba(13,18,35,0.78) !important; }\n' +
-        '[class*="sidebarCol"] [class*="_brand"] { background: ' + brand + " !important; }";
+    // 亮度设计:叠加层克制,让壁纸/渐变明显透出;侧边栏用品牌蓝玻璃
+    function glassCss(brandColor) {
+      const rgb = hexToRgb(brandColor);
+      const rgba = (a) => "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + "," + a + ")";
+      return '[class*="sidebarCol"] { background: ' + rgba(0.42) + " !important; " +
+        'backdrop-filter: blur(16px) saturate(1.3) !important; -webkit-backdrop-filter: blur(16px) saturate(1.3) !important; }\n' +
+        '[class*="detailsCol"] { background: rgba(15,23,42,0.38) !important; ' +
+        'backdrop-filter: blur(16px) saturate(1.2) !important; -webkit-backdrop-filter: blur(16px) saturate(1.2) !important; }\n' +
+        '[class*="centerCol"] { background: rgba(10,15,30,0.55) !important; }\n' +
+        '[class*="sidebarCol"] [class*="_brand"] { background: ' + rgba(0.62) + " !important; }";
     }
 
+    // 背景选择:新键优先;迁移旧版遗留(gradient 存于 background 键出现之前);
+    // 无任何设置时使用出厂默认背景 默认.jpg
     function resolveBackground() {
       const raw = lsGet("deepharness.background", null);
       if (raw) {
@@ -628,15 +633,22 @@ window.__ModuleLoader__.load({
           if (parsed && typeof parsed.kind === "string") return parsed;
         } catch { /* fall through */ }
       }
-      // 出厂默认背景:仓库自带 assets/backgrounds/默认.jpg
-      return { kind: "image", name: DEFAULT_BG_NAME };
+      const legacyGradient = lsGet("deepharness.gradient", null);
+      if (legacyGradient && legacyGradient !== "none") {
+        const next = { kind: "gradient", id: legacyGradient };
+        lsSet("deepharness.background", JSON.stringify(next));
+        return next;
+      }
+      const def = { kind: "image", name: DEFAULT_BG_NAME };
+      lsSet("deepharness.background", JSON.stringify(def));
+      return def;
     }
 
     // 应用外观(读取 localStorage;返回 disposer 用于撤销令牌覆盖)
     function applyAppearance(theme) {
       const brand = lsGet("deepharness.brand", "on") !== "off";
       const brandColor = lsGet("deepharness.brandColor", BRAND_COLOR);
-      // 侧边栏用同系深色,不与主色相同
+      // 侧边栏用同系深色(无背景模式),不与主色相同
       const sidebarColor = mixToward(brandColor, "#0B1220", 0.28);
       const font = lsGet("deepharness.font", "default");
       const bg = resolveBackground();
@@ -652,14 +664,9 @@ window.__ModuleLoader__.load({
 
       const css = [];
       if (bgLayer) {
+        // 有背景:玻璃设计(侧边栏品牌蓝玻璃,与 brand 开关无关)
         css.push("html, body { background: " + bgLayer + "; background-color: #0B1220; }");
-        if (brand) {
-          css.push(glassCss(brandColor, sidebarColor));
-        } else {
-          css.push('[class*="sidebarCol"] { background: rgba(13,18,35,0.5) !important; backdrop-filter: blur(18px) saturate(1.2) !important; -webkit-backdrop-filter: blur(18px) saturate(1.2) !important; }');
-          css.push('[class*="detailsCol"] { background: rgba(13,18,35,0.5) !important; backdrop-filter: blur(18px) saturate(1.2) !important; -webkit-backdrop-filter: blur(18px) saturate(1.2) !important; }');
-          css.push('[class*="centerCol"] { background: rgba(13,18,35,0.78) !important; }');
-        }
+        css.push(glassCss(brandColor));
       } else if (brand) {
         css.push('[class*="sidebarCol"] { background: ' + sidebarColor + ' !important; }');
         css.push('[class*="sidebarCol"] [class*="_brand"] { background: ' + brandColor + ' !important; }');
@@ -669,10 +676,10 @@ window.__ModuleLoader__.load({
 
       if (theme) {
         const tokens = {};
-        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(13,18,35,0.8)", dark: "rgba(13,18,35,0.8)" };
+        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(10,15,30,0.55)", dark: "rgba(10,15,30,0.55)" };
         if (brand) {
           tokens["--dsw-specific-sidebar-fill"] = {
-            light: bgLayer ? withAlpha(sidebarColor, 0.55) : sidebarColor,
+            light: bgLayer ? withAlpha(sidebarColor, 0.5) : sidebarColor,
             dark: bgLayer ? withAlpha(sidebarColor, 0.55) : sidebarColor
           };
         }
@@ -927,7 +934,7 @@ window.__ModuleLoader__.load({
               onChange: (e) => setBrandColorV(e.target.value)
             }),
             React.createElement("span", { style: { ...STYLES.hint, flex: 1, minWidth: 200 } },
-              "主色用于顶栏/标题行;侧边栏自动使用同系深色(" + mixToward(brandColor, "#0B1220", 0.28) + "),两者区分不雷同")
+              "主色用于顶栏/标题行;有背景时侧边栏为品牌蓝玻璃,无背景时自动配同系深色(" + mixToward(brandColor, "#0B1220", 0.28) + "),两者区分不雷同")
           ),
           React.createElement("div", { style: STYLES.row },
             React.createElement("span", { style: STYLES.label }, "界面字体"),
@@ -1005,6 +1012,24 @@ window.__ModuleLoader__.load({
           React.createElement("div", { style: STYLES.hint },
             "当前时段 = " + tier.label + "。高峰(北京时间 9:00-12:00、14:00-18:00)为基准价,空闲时段半价;2026-08-17 前按旧价。参考 DeepSeek 官方定价页。"
           )
+        ),
+
+        React.createElement("div", { style: STYLES.row },
+          React.createElement("button", {
+            style: { ...STYLES.button, borderColor: "#B45309", color: "#B45309" },
+            onClick: () => {
+              ["deepharness.brand", "deepharness.brandColor", "deepharness.font", "deepharness.background", "deepharness.gradient", "deepharness.customFonts"].forEach(k => {
+                try { localStorage.removeItem(k); } catch { /* ignore */ }
+              });
+              setBrand(true);
+              setBrandColor(BRAND_COLOR);
+              setFont("default");
+              setBg(resolveBackground());
+              reload();
+              setMsg("✓ 已恢复默认外观(默认背景 默认.jpg + 品牌蓝玻璃)");
+            }
+          }, "恢复默认外观"),
+          React.createElement("span", { style: STYLES.hint }, "一键清除外观设置并回到出厂默认")
         ),
 
         msg && React.createElement("div", { style: STYLES.hint }, msg),
