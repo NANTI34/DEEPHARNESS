@@ -3,8 +3,8 @@
 //      窗口状态持久化(%USERPROFILE%\.dsh\app\window-state.json)
 //      设置持久化桥(%USERPROFILE%\.dsh\app\desktop-settings.json)
 // 用法:electron main.js [--port 3080] [--smoke] [--debug]
-const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron')
-const { spawn } = require('child_process')
+const { app, BrowserWindow, ipcMain, shell, Menu, Tray, dialog } = require('electron')
+const { spawn, execFile } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const net = require('net')
@@ -28,7 +28,8 @@ const BOOT_TIMEOUT_MS = 120000
 
 // Chromium 数据(含 localStorage)放入 .dsh\app\electron-user-data:
 // 与产品“数据 100% 在 %USERPROFILE%\.dsh”的承诺一致
-app.setPath('userData', path.join(DSH_HOME, 'app', 'electron-user-data'))
+// DSH_TEST_USERDATA 用于隔离测试实例(避开单实例锁,不碰真实数据)
+app.setPath('userData', process.env.DSH_TEST_USERDATA || path.join(DSH_HOME, 'app', 'electron-user-data'))
 
 // 启动日志(文件级证据,stdout 在 GUI 子系统中不可见)
 function bootLog(...args) {
@@ -53,6 +54,8 @@ if (!gotLock) {
   let bootAborted = false
   let stateWriteTimer = null
   let smokeTimer = null
+  let tray = null
+  let allowClose = false // 退出流程放行窗口关闭
 
   app.setName('DEEPHARNESS')
   app.setAppUserModelId('com.deepharness.desktop')
@@ -225,6 +228,151 @@ if (!gotLock) {
     if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
   }
 
+  // ── 系统托盘 / 退出流程 ───────────────────────────────────────────
+  function getCloseAction() {
+    try {
+      const a = readSettingsFile()['closeAction']
+      return ['ask', 'tray', 'quit-keep', 'quit-stop'].includes(a) ? a : 'ask'
+    } catch { return 'ask' }
+  }
+
+  function saveCloseAction(a) {
+    try {
+      const all = readSettingsFile()
+      all['closeAction'] = a
+      fs.mkdirSync(APP_STATE_DIR, { recursive: true })
+      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(all, null, 2))
+    } catch { /* ignore */ }
+  }
+
+  function saveWindowStateNow() {
+    try {
+      if (win && !win.isDestroyed()) {
+        if (stateWriteTimer) clearTimeout(stateWriteTimer)
+        if (!win.isMaximized()) win.__normalBounds = win.getBounds()
+        const s = { ...win.getBounds(), isMaximized: win.isMaximized() }
+        fs.mkdirSync(APP_STATE_DIR, { recursive: true })
+        fs.writeFileSync(WINDOW_STATE_FILE, JSON.stringify(s, null, 2))
+      }
+    } catch { /* ignore */ }
+  }
+
+  function showMainWindow() {
+    if (!win || win.isDestroyed()) {
+      createWindow()
+      bootAndLoad().catch(err => {
+        console.error('[DEEPHARNESS] boot failed:', err)
+        sendToRenderer('dsh:error', String(err.message || err))
+      })
+      return
+    }
+    if (win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
+  }
+
+  function hideToTray() {
+    try {
+      saveWindowStateNow()
+      if (win && !win.isDestroyed()) win.hide()
+      bootLog('hidden to tray')
+      if (tray && process.platform === 'win32') {
+        try {
+          tray.displayBalloon({
+            title: 'DEEPHARNESS',
+            content: '已最小化到系统托盘,DSH 服务继续运行。右键托盘图标可退出。'
+          })
+        } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+  }
+
+  function portPid() {
+    return new Promise(resolve => {
+      const cmd = '(Get-NetTCPConnection -LocalPort ' + PORT + ' -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess)'
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true, timeout: 8000 }, (err, stdout) => {
+        const pid = Number(String(stdout || '').trim())
+        resolve(Number.isInteger(pid) && pid > 0 ? pid : null)
+      })
+    })
+  }
+
+  // 停止本地 DSH 服务:优先结束自己拉起的进程,否则结束占用端口的进程
+  async function stopService() {
+    const target = serverProc && serverProc.pid ? serverProc.pid : await portPid()
+    if (!target) {
+      bootLog('stopService: no pid found on port', PORT)
+      return false
+    }
+    await new Promise(resolve => {
+      execFile('taskkill', ['/PID', String(target), '/T', '/F'], { windowsHide: true, timeout: 10000 }, () => resolve())
+    })
+    bootLog('stopService: killed pid', target)
+    return true
+  }
+
+  async function quitApp(stopServiceToo) {
+    allowClose = true
+    try {
+      saveWindowStateNow()
+      if (stopServiceToo) {
+        bootLog('exit with service stop')
+        await stopService()
+      } else {
+        bootLog('exit keep service')
+      }
+    } catch (err) { bootLog('exit error', String(err)) }
+    app.exit(0)
+  }
+
+  async function onCloseRequested() {
+    const action = getCloseAction()
+    if (action === 'tray') return hideToTray()
+    if (action === 'quit-stop') return quitApp(true)
+    if (action === 'quit-keep') return quitApp(false)
+    let result
+    try {
+      result = await dialog.showMessageBox(win, {
+        type: 'question',
+        title: 'DEEPHARNESS',
+        message: '关闭窗口后希望如何处理?',
+        detail: '· 最小化到托盘:应用驻留系统托盘,DSH 服务继续运行\n' +
+          '· 退出并结束服务:退出应用,并停止本地 DSH 服务\n' +
+          '· 退出(服务保持运行):仅关闭应用窗口,服务常驻后台',
+        buttons: ['最小化到托盘', '退出并结束服务', '退出(服务保持运行)'],
+        defaultId: 0,
+        cancelId: 2,
+        noLink: true,
+        checkboxLabel: '记住选择,下次直接执行'
+      })
+    } catch { return }
+    if (result.checkboxChecked) {
+      saveCloseAction(['tray', 'quit-stop', 'quit-keep'][result.response] || 'ask')
+    }
+    if (result.response === 0) hideToTray()
+    else if (result.response === 1) quitApp(true)
+    else quitApp(false)
+  }
+
+  function createTray() {
+    try {
+      tray = new Tray(ICON)
+      tray.setToolTip('DEEPHARNESS - DeepSeek Harness 工作台')
+      tray.setContextMenu(Menu.buildFromTemplate([
+        { label: '打开工作台', click: showMainWindow },
+        { type: 'separator' },
+        { label: '最小化到托盘', click: hideToTray },
+        { type: 'separator' },
+        { label: '退出(服务保持运行)', click: () => quitApp(false) },
+        { label: '退出并停止服务', click: () => quitApp(true) }
+      ]))
+      tray.on('click', showMainWindow)
+      bootLog('tray created')
+    } catch (err) {
+      bootLog('tray failed', String(err && err.message || err))
+    }
+  }
+
   // ── 启动状态页(品牌化加载页)────────────────────────────────────
   const STATUS_HTML = `<!doctype html><html><head><meta charset="utf-8"><title>DEEPHARNESS</title>
 <style>
@@ -321,16 +469,11 @@ if (!gotLock) {
     })
     win.on('maximize', scheduleSaveWindowState)
     win.on('unmaximize', scheduleSaveWindowState)
-    win.on('close', () => {
-      if (stateWriteTimer) clearTimeout(stateWriteTimer)
-      try {
-        if (win && !win.isDestroyed()) {
-          if (!win.isMaximized()) win.__normalBounds = win.getBounds()
-          const s = { ...win.getBounds(), isMaximized: win.isMaximized() }
-          fs.mkdirSync(APP_STATE_DIR, { recursive: true })
-          fs.writeFileSync(WINDOW_STATE_FILE, JSON.stringify(s, null, 2))
-        }
-      } catch { /* ignore */ }
+    // 关闭窗口 → 询问:最小化到托盘 / 退出并结束服务 / 退出(服务保持运行)
+    win.on('close', (e) => {
+      if (allowClose) return
+      e.preventDefault()
+      onCloseRequested()
     })
 
     // 外部链接 → 系统浏览器;只允许加载本地服务地址
@@ -382,14 +525,40 @@ if (!gotLock) {
       bootLog('loading', URL_BASE + '/')
       win.loadURL(URL_BASE + '/')
       win.webContents.once('did-finish-load', () => {
-        if (IS_SMOKE) armSmokeExit()
+        if (IS_SMOKE) {
+          const closeAction = process.env.DSH_SMOKE_CLOSE
+          if (closeAction) armSmokeClose(closeAction)
+          else armSmokeExit()
+        }
       })
-      if (IS_SMOKE && win.webContents.getURL().startsWith(URL_BASE)) armSmokeExit()
+      if (IS_SMOKE && win.webContents.getURL().startsWith(URL_BASE)) {
+        const closeAction = process.env.DSH_SMOKE_CLOSE
+        if (closeAction) armSmokeClose(closeAction)
+        else armSmokeExit()
+      }
     } catch (err) {
       const tail = await errTail()
       bootLog('boot ERROR', String(err.message || err))
       sendToRenderer('dsh:error', String(err.message || err) + (tail ? '\n\n日志尾部:\n' + tail : ''))
     }
+  }
+
+  // 冒烟测试专用:预设关闭动作并触发 win.close(),验证托盘/退出流程
+  function armSmokeClose(action) {
+    if (smokeTimer) return
+    saveCloseAction(action)
+    setTimeout(() => {
+      bootLog('smoke-close: triggering close, action=' + action)
+      if (win && !win.isDestroyed()) win.close()
+    }, 2000)
+    setTimeout(() => {
+      try {
+        const visible = win && !win.isDestroyed() && win.isVisible()
+        bootLog('smoke-close: verify visible=' + visible)
+        console.log('[SMOKE-CLOSE] visible=' + visible + ' action=' + action)
+      } catch { /* ignore */ }
+      app.exit(0)
+    }, 10000)
   }
 
   async function armSmokeExit() {
@@ -480,24 +649,32 @@ if (!gotLock) {
 
   // ── 应用生命周期 ────────────────────────────────────────────────
   app.on('second-instance', () => {
-    if (win) {
-      if (win.isMinimized()) win.restore()
-      win.focus()
-    }
+    showMainWindow()
+  })
+
+  app.on('before-quit', () => {
+    allowClose = true
   })
 
   app.whenReady().then(() => {
     createWindow()
+    createTray()
     bootAndLoad().catch(err => {
       console.error('[DEEPHARNESS] boot failed:', err)
       sendToRenderer('dsh:error', String(err.message || err))
     })
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow()
+        bootAndLoad().catch(() => {})
+      } else {
+        showMainWindow()
+      }
     })
   })
 
   app.on('window-all-closed', () => {
+    // 托盘驻留时窗口只是隐藏,不会走到这里;走到这里说明正在退出
     if (serverProc && serverProc.__resolved) serverProc.unref()
     app.quit()
   })

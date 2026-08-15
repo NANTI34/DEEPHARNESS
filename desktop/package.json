@@ -1,9 +1,9 @@
 {
   "name": "deepharness-desktop",
   "productName": "DEEPHARNESS",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "DEEPHARNESS 桌面壳 - DeepSeek Harness 的原生 Windows 桌面应用(Electron 窗口)",
+  "description": "DEEPHARNESS 桌面壳 - DeepSeek Harness 的原生 Windows 桌面应用(Electron 窗口,支持系统托盘与退出选择)",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
