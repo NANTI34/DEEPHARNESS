@@ -9,10 +9,12 @@
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1
     powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Port 8080
+    powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -NoOpen
 #>
 param(
     [int]$Port = 3080,
-    [string]$Workspace = ''
+    [string]$Workspace = '',
+    [switch]$NoOpen
 )
 
 $ErrorActionPreference = 'Stop'
@@ -47,7 +49,7 @@ function Test-PortOpen([int]$p) {
 
 function Test-DshUp([string]$u) {
     try {
-        $r = Invoke-WebRequest -Uri $u -UseBasicParsing -TimeoutSec 3
+        $r = Invoke-WebRequest -Uri $u -UseBasicParsing -TimeoutSec 8
         return ($r.StatusCode -eq 200 -and $r.Content -match '__DSH_BOOT__')
     } catch { return $false }
 }
@@ -77,27 +79,33 @@ if (-not $up) {
     New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
     $outLog = Join-Path $LogDir 'server.log'
     $errLog = Join-Path $LogDir 'server.err.log'
-    $nodeArgs = @('"' + $Bins + '"')
+    # 注意:必须显式传 'web'(等价 --profile web),否则 dsh 会报
+    # "error: --profile <name> is required" 并退出
+    $nodeArgs = @('"' + $Bins + '"', 'web')
     if ($Port -ne 3080) { $nodeArgs += "--port $Port" }
     $proc = Start-Process -FilePath $node -ArgumentList $nodeArgs `
         -WorkingDirectory $Workspace -WindowStyle Hidden `
         -RedirectStandardOutput $outLog -RedirectStandardError $errLog -PassThru
     $ok = $false
-    for ($i = 0; $i -lt 90; $i++) {
-        Start-Sleep -Milliseconds 1000
+    for ($i = 0; $i -lt 120; $i++) {
+        Start-Sleep -Milliseconds 500
         if ((Test-PortOpen $Port) -and (Test-DshUp $Url)) { $ok = $true; break }
         if ($proc.HasExited) { break }
     }
     if (-not $ok) {
         $tail = ''
         if (Test-Path $errLog) { $tail = (Get-Content $errLog -Tail 8) -join [Environment]::NewLine }
-        [System.Windows.Forms.MessageBox]::Show(
-            'DEEPHARNESS 服务启动失败。' + [Environment]::NewLine + [Environment]::NewLine +
-            '错误日志(logs\server.err.log)最后几行:' + [Environment]::NewLine + $tail,
-            'DEEPHARNESS', 'OK', 'Error') | Out-Null
+        if (-not $NoOpen) {
+            [System.Windows.Forms.MessageBox]::Show(
+                'DEEPHARNESS 服务启动失败。' + [Environment]::NewLine + [Environment]::NewLine +
+                '错误日志(logs\server.err.log)最后几行:' + [Environment]::NewLine + $tail,
+                'DEEPHARNESS', 'OK', 'Error') | Out-Null
+        }
         exit 1
     }
 }
 
-# 2. 打开界面(默认浏览器)
-Start-Process $Url
+# 2. 打开界面(默认浏览器);-NoOpen 仅启动/检测服务(供测试与脚本调用)
+if (-not $NoOpen) {
+    Start-Process $Url
+}
