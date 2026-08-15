@@ -610,16 +610,15 @@ window.__ModuleLoader__.load({
       return rgb.replace("rgb(", "rgba(").replace(")", "," + alpha + ")");
     }
 
-    // 有背景时:侧栏(含顶栏标题行)/详情栏半透明毛玻璃,中间内容区半透明
-    // 亮度设计:叠加层克制,让壁纸/渐变明显透出;侧边栏用品牌蓝玻璃
+    // 有背景时:侧栏(含顶栏标题行)/详情栏半透明,中间内容区半透明。
+    // 注意:绝不能在这里用 backdrop-filter——它会创建新的包含块,
+    // 把设置面板(position:fixed 全屏浮层)困在侧边栏里,导致设置页挤成一团。
     function glassCss(brandColor) {
       const rgb = hexToRgb(brandColor);
       const rgba = (a) => "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + "," + a + ")";
-      return '[class*="sidebarCol"] { background: ' + rgba(0.45) + " !important; " +
-        'backdrop-filter: blur(14px) saturate(1.3) !important; -webkit-backdrop-filter: blur(14px) saturate(1.3) !important; }\n' +
-        '[class*="detailsCol"] { background: rgba(15,23,42,0.35) !important; ' +
-        'backdrop-filter: blur(14px) saturate(1.2) !important; -webkit-backdrop-filter: blur(14px) saturate(1.2) !important; }\n' +
-        '[class*="centerCol"] { background: rgba(8,12,25,0.42) !important; }\n' +
+      return '[class*="sidebarCol"] { background: ' + rgba(0.45) + " !important; }\n" +
+        '[class*="detailsCol"] { background: rgba(15,23,42,0.35) !important; }\n' +
+        '[class*="centerCol"] { background: rgba(8,12,25,0.35) !important; }\n' +
         '[class*="sidebarCol"] [class*="_brand"] { background: ' + rgba(0.6) + " !important; }";
     }
 
@@ -630,11 +629,20 @@ window.__ModuleLoader__.load({
       if (raw) {
         try {
           const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed.kind === "string") return parsed;
+          if (parsed && typeof parsed.kind === "string") {
+            // 1.3.0 升级清理:旧版遗留 gradient 键存在时,强制回到出厂默认背景
+            // (用户明确以 默认.jpg 为默认背景,旧渐变选择不再沿用)
+            if (lsGet("deepharness.gradient", null) !== null) {
+              try { localStorage.removeItem("deepharness.gradient"); } catch { /* ignore */ }
+              const def = { kind: "image", name: DEFAULT_BG_NAME };
+              lsSet("deepharness.background", JSON.stringify(def));
+              return def;
+            }
+            return parsed;
+          }
         } catch { /* fall through */ }
       }
       // 出厂默认背景:仓库自带 assets/backgrounds/默认.jpg
-      // (旧版遗留的 gradient 键不再覆盖默认背景)
       const def = { kind: "image", name: DEFAULT_BG_NAME };
       lsSet("deepharness.background", JSON.stringify(def));
       return def;
@@ -672,7 +680,7 @@ window.__ModuleLoader__.load({
 
       if (theme) {
         const tokens = {};
-        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(8,12,25,0.4)", dark: "rgba(8,12,25,0.4)" };
+        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(8,12,25,0.35)", dark: "rgba(8,12,25,0.35)" };
         if (brand) {
           tokens["--dsw-specific-sidebar-fill"] = {
             light: bgLayer ? withAlpha(sidebarColor, 0.5) : sidebarColor,
@@ -765,11 +773,11 @@ window.__ModuleLoader__.load({
         }
       },
         React.createElement("div", { style: { color: "#E2E8F0", fontSize: 15, fontWeight: 600 } },
-          "裁剪背景图(固定 16:9,拖动图片调整位置)"),
+          "裁剪背景图(固定 16:9;拖动图片定位,滑杆缩放)"),
         React.createElement("div", {
           ref: areaRef,
           style: {
-            position: "relative", width: "min(92vw, 1000px)", height: "min(60vh, 520px)",
+            position: "relative", width: "min(94vw, 1100px)", height: "min(68vh, 560px)",
             overflow: "hidden", borderRadius: 12, border: "1px solid #334155",
             background: "#0B1220", cursor: "grab"
           },
@@ -800,11 +808,13 @@ window.__ModuleLoader__.load({
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, color: "#CBD5E1", fontSize: 13 } },
           "缩放",
           React.createElement("input", {
-            type: "range", min: 1, max: 4, step: 0.05, value: scale,
+            type: "range", min: 0.5, max: 4, step: 0.05, value: scale,
             style: { width: 220 },
             onChange: (e) => setScale(Number(e.target.value))
           }),
-          scale.toFixed(2) + "×"
+          scale.toFixed(2) + "×",
+          React.createElement("span", { style: { color: "#64748B", fontSize: 12 } },
+            "缩小(0.5×)可截取更大画面;应用后按 16:9 铺满窗口,超宽/超高窗口边缘会裁切")
         ),
         React.createElement("div", { style: { display: "flex", gap: 10 } },
           React.createElement("button", {
@@ -914,7 +924,7 @@ window.__ModuleLoader__.load({
       const bgKind = bg && bg.kind ? bg.kind : "none";
       const bgImageName = bgKind === "image" ? bg.name : "";
 
-      return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, maxWidth: 760 } },
+      return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, maxWidth: 820 } },
 
         diag && React.createElement("div", {
           style: {
@@ -1089,6 +1099,11 @@ window.__ModuleLoader__.load({
         order: 90,
         label: () => "DEEPHARNESS 外观"
       }, AppearanceSettings));
+
+      // 设置面板加宽:DSH 内核把面板固定为 800px,内容区仅约 580px,
+      // 导致各设置页拥挤。这里放宽到视口允许的最大宽度。
+      injectCSS("deep-harness-appearance-settings",
+        '[class*="VOzbGW_panel"] { width: min(1120px, calc(100vw - 48px)) !important; }');
 
       // 启动即应用已保存的外观(品牌色/字体/背景),重启后自动恢复
       ctx.effect(() => {

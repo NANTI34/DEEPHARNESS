@@ -10,8 +10,9 @@ const code = fs.readFileSync(path.join(__dirname, '..', 'lib', 'client.js'), 'ut
 
 // ── DOM/localStorage 桩 ─────────────────────────────────────────────
 const storage = new Map()
-// 模拟旧版遗留 localStorage:gradient 旧键存在、无 background 新键、brand=off
+// 模拟用户真实状态:1.2.0 已迁移 background=forest,旧 gradient 键残留
 storage.set('deepharness.gradient', 'forest')
+storage.set('deepharness.background', JSON.stringify({ kind: 'gradient', id: 'forest' }))
 storage.set('deepharness.brand', 'off')
 storage.set('deepharness.font', 'default')
 const localStorage = {
@@ -103,11 +104,12 @@ assert.strictEqual(settingsSections[0].reg.id, 'deepharness-appearance')
 assert.strictEqual(typeof settingsSections[0].reg.label, 'function')
 assert.ok(settingsSections[0].reg.label().length > 0, 'section nav label required')
 
-// 无 background 设置时(旧版遗留 gradient 键存在):apply 应写入出厂默认背景 默认.jpg
+// 1.3.0 升级清理:旧版遗留 gradient 键存在 → 强制回到出厂默认背景 默认.jpg
 const migrated = JSON.parse(storage.get('deepharness.background'))
 assert.strictEqual(migrated.kind, 'image', 'default background must be image')
 assert.strictEqual(migrated.name, '默认.jpg', 'default background must be 默认.jpg')
-console.log('default background OK: ' + storage.get('deepharness.background'))
+assert.strictEqual(storage.has('deepharness.gradient'), false, 'legacy gradient key must be removed')
+console.log('upgrade cleanup OK: gradient removed, background=' + storage.get('deepharness.background'))
 
 console.log('slot registrations OK:')
 for (const r of slotRegs) console.log('  -', r.name, '->', r.reg.id, r.reg.order)
