@@ -521,6 +521,11 @@ window.__ModuleLoader__.load({
       // 会话内工作目录(相对工作区根),支持 cd 并持久到本次会话
       const [cwd, setCwd] = React.useState(".");
 
+      // 输出行数上限:防止大输出把页面拖卡
+      const MAX_TERM_LINES = 600;
+      const append = (line) => setLines(prev =>
+        prev.length >= MAX_TERM_LINES ? [...prev.slice(1), line] : [...prev, line]);
+
       React.useEffect(() => {
         apiGet("/status").then(d => setRoot(d.root || "")).catch(() => setRoot(""));
       }, []);
@@ -565,40 +570,42 @@ window.__ModuleLoader__.load({
           const d = await apiGet("/tree?path=" + encodeURIComponent(rel) + "&depth=0");
           if (d.tree && d.tree.type === "dir") {
             setCwd(rel);
-            setLines(prev => [...prev, { type: "cmd", text: "❯ " + command }, { type: "sys", text: "当前目录: " + fullPath(rel) }]);
+            append({ type: "cmd", text: "❯ " + command });
+            append({ type: "sys", text: "当前目录: " + fullPath(rel) });
           } else {
-            setLines(prev => [...prev, { type: "cmd", text: "❯ " + command }, { type: "err", text: "cd: 不是目录或不存在: " + (arg || ".") }]);
+            append({ type: "cmd", text: "❯ " + command });
+            append({ type: "err", text: "cd: 不是目录或不存在: " + (arg || ".") });
           }
         } catch (err) {
-          setLines(prev => [...prev, { type: "cmd", text: "❯ " + command }, { type: "err", text: "cd 失败: " + String(err.message || err) }]);
+          append({ type: "cmd", text: "❯ " + command });
+          append({ type: "err", text: "cd 失败: " + String(err.message || err) });
         }
       };
 
       const run = async (cmd) => {
         const command = cmd.trim();
         if (!command || busy) return;
-        if (/^cd(\s|$)/i.test(command)) {
-          setValue("");
-          setHistory(prev => [command, ...prev].slice(0, 50));
-          setHistoryIdx(-1);
-          await doCd(command);
-          return;
-        }
-        setLines(prev => [...prev, { type: "cmd", text: "❯ " + command }]);
         setValue("");
         setHistory(prev => [command, ...prev].slice(0, 50));
         setHistoryIdx(-1);
+        if (/^cd(\s|$)/i.test(command)) {
+          setBusy(true);
+          try {
+            await doCd(command);
+          } finally {
+            setBusy(false);
+          }
+          return;
+        }
+        append({ type: "cmd", text: "❯ " + command });
         setBusy(true);
         try {
           const d = await apiPost("/exec", { command, cwd, timeoutMs: 60000 });
-          if (d.stdout) setLines(prev => [...prev, { type: "out", text: d.stdout.replace(/\n$/, "") }]);
-          if (d.stderr) setLines(prev => [...prev, { type: "err", text: d.stderr.replace(/\n$/, "") }]);
-          setLines(prev => [...prev, {
-            type: "sys",
-            text: d.timedOut ? "[已超时]" : ("[exit code: " + d.exitCode + "]")
-          }]);
+          if (d.stdout) append({ type: "out", text: d.stdout.replace(/\n$/, "") });
+          if (d.stderr) append({ type: "err", text: d.stderr.replace(/\n$/, "") });
+          append({ type: "sys", text: d.timedOut ? "[已超时]" : ("[exit code: " + d.exitCode + "]") });
         } catch (err) {
-          setLines(prev => [...prev, { type: "err", text: String(err.message || err) }]);
+          append({ type: "err", text: String(err.message || err) });
         } finally {
           setBusy(false);
         }
@@ -749,9 +756,16 @@ window.__ModuleLoader__.load({
 
       const css = [];
       if (bgLayer) {
-        // 有背景:玻璃设计(侧边栏品牌蓝玻璃,与 brand 开关无关)
+        // 有背景:玻璃视效。品牌色开关真正生效——
+        // 勾选 = 品牌蓝玻璃;不勾选 = 中性深色玻璃(完全不用品牌色)
         css.push("html, body { background: " + bgLayer + "; background-color: #0B1220; }");
-        css.push(glassCss(brandColor));
+        if (brand) {
+          css.push(glassCss(brandColor));
+        } else {
+          css.push('[class*="sidebarCol"] { background: rgba(13,18,35,0.5) !important; }');
+          css.push('[class*="detailsCol"] { background: rgba(13,18,35,0.4) !important; }');
+          css.push('[class*="centerCol"] { background: rgba(8,12,25,0.28) !important; }');
+        }
       } else if (brand) {
         css.push('[class*="sidebarCol"] { background: ' + sidebarColor + ' !important; }');
         css.push('[class*="sidebarCol"] [class*="_brand"] { background: ' + brandColor + ' !important; }');
