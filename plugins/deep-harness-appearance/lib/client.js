@@ -773,6 +773,23 @@ window.__ModuleLoader__.load({
       }
       injectCSS("deep-harness-appearance-bg", css.join("\n"));
 
+      // 金边装饰(可开关):金色渐变边框、光晕、繁复华丽风格
+      const gold = lsGet("deepharness.gold", "off") === "on";
+      if (gold) {
+        injectCSS("deep-harness-appearance-gold",
+          '[class*="sidebarCol"] { border-right: 1px solid rgba(212,175,55,0.45) !important; }\n' +
+          '[class*="sidebarCol"] [class*="_brand"] { background: linear-gradient(135deg, rgba(212,175,55,0.30), rgba(212,175,55,0.10) 55%, transparent) !important; border-bottom: 1px solid rgba(212,175,55,0.55) !important; }\n' +
+          '[class*="sidebarCol"] [class*="_brand"] svg, [class*="sidebarCol"] [class*="_brand"] img { filter: drop-shadow(0 0 6px rgba(212,175,55,0.55)); }\n' +
+          '[class*="VOzbGW_panel"] { border: 1px solid rgba(212,175,55,0.45) !important; box-shadow: 0 0 30px rgba(212,175,55,0.16), var(--dsw-shadow-lv3) !important; }\n' +
+          '[class*="VOzbGW_navCell"]:hover { border: 1px solid rgba(212,175,55,0.4) !important; }\n' +
+          '[class*="editorWrap"], [class*="treeCol"], [class*="terminal"], textarea, pre { border-color: rgba(212,175,55,0.32) !important; }\n' +
+          'button:not([class*="iconButton"]):hover { border-color: rgba(212,175,55,0.55) !important; }\n' +
+          '::selection { background: rgba(212,175,55,0.35) !important; }\n' +
+          '[class*="cost"], [class*="panel"] [class*="row"] { border-left: 2px solid rgba(212,175,55,0.35) !important; }\n');
+      } else {
+        injectCSS("deep-harness-appearance-gold", "");
+      }
+
       if (theme) {
         const tokens = {};
         if (bgLayer) {
@@ -946,6 +963,7 @@ window.__ModuleLoader__.load({
       const [brand, setBrand] = React.useState(lsGet("deepharness.brand", "on") !== "off");
       const [brandColor, setBrandColor] = React.useState(lsGet("deepharness.brandColor", BRAND_COLOR));
       const [font, setFont] = React.useState(lsGet("deepharness.font", "default"));
+      const [gold, setGold] = React.useState(lsGet("deepharness.gold", "off") === "on");
       const [bg, setBg] = React.useState(resolveBackground());
       const [fonts, setFonts] = React.useState([]);
       const [backgrounds, setBackgrounds] = React.useState([]);
@@ -973,6 +991,7 @@ window.__ModuleLoader__.load({
       const setBrandV = (v) => { lsSet("deepharness.brand", v ? "on" : "off"); setBrand(v); reload(); };
       const setBrandColorV = (v) => { lsSet("deepharness.brandColor", v); setBrandColor(v); reload(); };
       const setFontV = (v) => { lsSet("deepharness.font", v); setFont(v); reload(); };
+      const setGoldV = (v) => { lsSet("deepharness.gold", v ? "on" : "off"); setGold(v); reload(); };
       const setBgV = (next) => { lsSet("deepharness.background", JSON.stringify(next)); setBg(next); reload(); };
 
       const applyFontFile = async (name) => {
@@ -1074,6 +1093,16 @@ window.__ModuleLoader__.load({
             React.createElement("select", { style: STYLES.select, value: font, onChange: (e) => setFontV(e.target.value) },
               FONT_CHOICES.map(c => React.createElement("option", { key: c.id, value: c.id }, c.label))
             )
+          )
+        ),
+
+        React.createElement("div", { style: STYLES.section },
+          React.createElement("span", { style: STYLES.sectionTitle }, "装饰(金边)"),
+          React.createElement("div", { style: STYLES.row },
+            React.createElement("span", { style: STYLES.label }, "金边装饰"),
+            React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" } },
+              React.createElement("input", { type: "checkbox", checked: gold, onChange: (e) => setGoldV(e.target.checked) }),
+              "开启金色边框与光晕 — 繁复华丽风格(侧边栏金边、品牌行金渐变、面板金框、控件金色描边)")
           )
         ),
 
