@@ -680,7 +680,7 @@ window.__ModuleLoader__.load({
 
       if (theme) {
         const tokens = {};
-        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(8,12,25,0.35)", dark: "rgba(8,12,25,0.35)" };
+        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(8,12,25,0.12)", dark: "rgba(8,12,25,0.12)" };
         if (brand) {
           tokens["--dsw-specific-sidebar-fill"] = {
             light: bgLayer ? withAlpha(sidebarColor, 0.5) : sidebarColor,
@@ -702,6 +702,17 @@ window.__ModuleLoader__.load({
       return () => {
         for (const d of disposers) { try { d(); } catch { /* ignore */ } }
       };
+    }
+
+    // 全局外观层:主题令牌覆盖由插件主流程统一持有(见 apply 的 ctx.effect),
+    // 设置组件触发重新应用但不在卸载时撤销,保证关闭设置后外观不丢失。
+    let appearanceDisposer = null;
+    function reapplyAppearance(theme) {
+      if (appearanceDisposer) {
+        try { appearanceDisposer(); } catch { /* ignore */ }
+        appearanceDisposer = null;
+      }
+      appearanceDisposer = applyAppearance(theme || window.__dshClientTheme || null);
     }
 
     // ── 背景图裁剪(固定 16:9)───────────────────────────────────────
@@ -808,13 +819,13 @@ window.__ModuleLoader__.load({
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, color: "#CBD5E1", fontSize: 13 } },
           "缩放",
           React.createElement("input", {
-            type: "range", min: 0.5, max: 4, step: 0.05, value: scale,
+            type: "range", min: 0.05, max: 8, step: 0.05, value: scale,
             style: { width: 220 },
             onChange: (e) => setScale(Number(e.target.value))
           }),
           scale.toFixed(2) + "×",
           React.createElement("span", { style: { color: "#64748B", fontSize: 12 } },
-            "缩小(0.5×)可截取更大画面;应用后按 16:9 铺满窗口,超宽/超高窗口边缘会裁切")
+            "缩小(0.05×)可截取超大画面,放大(8×)可截细节;应用后按 16:9 铺满窗口,边缘会裁切")
         ),
         React.createElement("div", { style: { display: "flex", gap: 10 } },
           React.createElement("button", {
@@ -840,16 +851,15 @@ window.__ModuleLoader__.load({
       const [msg, setMsg] = React.useState("");
       const [cropImage, setCropImage] = React.useState(null); // dataURL
       const [diag, setDiag] = React.useState(null); // 诊断信息(版本/环境)
-      const themeDisposerRef = React.useRef(null);
 
       const reload = React.useCallback(() => {
-        if (themeDisposerRef.current) { try { themeDisposerRef.current(); } catch { /* ignore */ } }
-        themeDisposerRef.current = applyAppearance(window.__dshClientTheme || null);
+        reapplyAppearance(window.__dshClientTheme || null);
       }, []);
 
       React.useEffect(() => {
         reload();
-        return () => { if (themeDisposerRef.current) { try { themeDisposerRef.current(); } catch { /* ignore */ } } };
+        // 注意:此处不得撤销外观层——层由插件主流程统一持有,
+        // 组件卸载(关闭设置)时撤销会导致背景/半透明永久丢失。
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
 
@@ -999,12 +1009,34 @@ window.__ModuleLoader__.load({
             bgKind === "image" && React.createElement("span", { style: STYLES.hint }, "当前: " + bgImageName)
           ),
           backgrounds.length > 0 && React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
-            backgrounds.map(b => React.createElement("button", {
+            backgrounds.map(b => React.createElement("span", {
               key: b.name,
-              style: bgKind === "image" && bgImageName === b.name ? STYLES.buttonPrimary : STYLES.button,
-              title: (b.bytes / 1024).toFixed(1) + " KB",
-              onClick: () => setBgV({ kind: "image", name: b.name })
-            }, b.name))
+              style: { display: "inline-flex", alignItems: "center", gap: 4 }
+            },
+              React.createElement("button", {
+                style: bgKind === "image" && bgImageName === b.name ? STYLES.buttonPrimary : STYLES.button,
+                title: (b.bytes / 1024).toFixed(1) + " KB" + (b.source === "repo" ? "(出厂自带)" : ""),
+                onClick: () => setBgV({ kind: "image", name: b.name })
+              }, b.name),
+              b.source === "user" && React.createElement("button", {
+                title: "删除此背景",
+                style: {
+                  padding: "5px 8px", borderRadius: 7, border: "1px solid var(--dsw-alias-border-l2)",
+                  background: "transparent", color: "#F87171", fontSize: 12, cursor: "pointer", lineHeight: 1
+                },
+                onClick: async () => {
+                  try {
+                    await apiPost("/background/delete", { name: b.name });
+                    const d = await apiGet("/backgrounds");
+                    setBackgrounds(d.backgrounds || []);
+                    if (bgKind === "image" && bgImageName === b.name) setBgV({ kind: "none" });
+                    setMsg("已删除背景 " + b.name);
+                  } catch (err) {
+                    setMsg("删除失败: " + String(err.message || err));
+                  }
+                }
+              }, "✕")
+            ))
           )
         ),
 
@@ -1105,10 +1137,17 @@ window.__ModuleLoader__.load({
       injectCSS("deep-harness-appearance-settings",
         '[class*="VOzbGW_panel"] { width: min(1120px, calc(100vw - 48px)) !important; }');
 
-      // 启动即应用已保存的外观(品牌色/字体/背景),重启后自动恢复
+      // 启动即应用已保存的外观(品牌色/字体/背景),重启后自动恢复。
+      // 主题覆盖层由插件主流程统一持有;设置组件只触发"重新应用",
+      // 绝不在组件卸载时撤销覆盖层(否则关闭设置面板后背景/半透明永久丢失)。
       ctx.effect(() => {
-        const dispose = applyAppearance(theme);
-        return () => { if (dispose) { try { dispose(); } catch { /* ignore */ } } };
+        reapplyAppearance(theme);
+        return () => {
+          if (appearanceDisposer) {
+            try { appearanceDisposer(); } catch { /* ignore */ }
+            appearanceDisposer = null;
+          }
+        };
       }, "deep-harness-appearance: appearance");
     }
 

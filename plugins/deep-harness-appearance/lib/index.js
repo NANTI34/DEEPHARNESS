@@ -199,13 +199,16 @@ export function apply(ctx) {
 
   function listBackgrounds() {
     const seen = new Map()
+    const userDir = path.join(dshHome, 'backgrounds')
     for (const dir of bgDirs) {
       let names = []
       try { names = readdirSync(dir) } catch { continue }
       for (const name of names) {
         if (!BG_EXTS.has(path.extname(name).toLowerCase())) continue
         if (seen.has(name)) continue
-        seen.set(name, { name, bytes: (() => { try { return statSync(path.join(dir, name)).size } catch { return 0 } })() })
+        // source: repo 目录为出厂自带(不可删),dshHome 为用户上传(可删)
+        const source = dir === userDir ? 'user' : 'repo'
+        seen.set(name, { name, source, bytes: (() => { try { return statSync(path.join(dir, name)).size } catch { return 0 } })() })
       }
     }
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh'))
@@ -254,7 +257,7 @@ export function apply(ctx) {
     sendJson(res, 200, {
       ok: true,
       plugin: name,
-      version: '1.3.0',
+      version: '1.4.0',
       root,
       dshHome,
       fontsDirs,
@@ -371,6 +374,21 @@ export function apply(ctx) {
     if (data.length === 0) throw new Error('empty image data')
     await fsp.writeFile(path.join(dir, name), data)
     sendJson(res, 200, { ok: true, name, bytes: data.length })
+  })
+
+  // 删除用户上传的背景图(出厂自带 repo 目录的图不可删)
+  prefix('POST', API_PREFIX + '/background/delete', async (req, res) => {
+    const body = JSON.parse((await readBody(req)).toString('utf8') || '{}')
+    const name = String(body.name || '')
+    if (!name || name.includes('/') || name.includes('\\') || name.includes('..')) throw new Error('invalid background name')
+    const file = findBgFile(name)
+    if (!file) throw new Error('background not found')
+    const userDir = path.join(dshHome, 'backgrounds')
+    if (!file.startsWith(userDir + path.sep) && file !== path.join(userDir, name)) {
+      throw new Error('出厂自带背景不可删除')
+    }
+    await fsp.unlink(file).catch(() => { throw new Error('删除失败') })
+    sendJson(res, 200, { ok: true, name })
   })
 
   prefix('POST', API_PREFIX + '/exec', async (req, res) => {
