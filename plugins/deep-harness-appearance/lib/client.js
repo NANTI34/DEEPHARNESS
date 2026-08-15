@@ -829,6 +829,7 @@ window.__ModuleLoader__.load({
       const [backgrounds, setBackgrounds] = React.useState([]);
       const [msg, setMsg] = React.useState("");
       const [cropImage, setCropImage] = React.useState(null); // dataURL
+      const [diag, setDiag] = React.useState(null); // 诊断信息(版本/环境)
       const themeDisposerRef = React.useRef(null);
 
       const reload = React.useCallback(() => {
@@ -845,6 +846,7 @@ window.__ModuleLoader__.load({
       React.useEffect(() => {
         apiGet("/fonts").then(d => setFonts(d.fonts || [])).catch(() => setFonts([]));
         apiGet("/backgrounds").then(d => setBackgrounds(d.backgrounds || [])).catch(() => setBackgrounds([]));
+        apiGet("/status").then(d => setDiag(d)).catch(() => setDiag(null));
       }, []);
 
       const setBrandV = (v) => { lsSet("deepharness.brand", v ? "on" : "off"); setBrand(v); reload(); };
@@ -913,6 +915,20 @@ window.__ModuleLoader__.load({
       const bgImageName = bgKind === "image" ? bg.name : "";
 
       return React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, maxWidth: 760 } },
+
+        diag && React.createElement("div", {
+          style: {
+            display: "flex", flexWrap: "wrap", gap: "6px 14px", alignItems: "center",
+            background: "rgba(77,107,254,0.08)", border: "1px solid rgba(77,107,254,0.25)",
+            borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "var(--dsw-alias-label-secondary)"
+          }
+        },
+          React.createElement("span", { style: { fontWeight: 700, color: "#4D6BFE" } }, "插件 v" + (diag.version || "?")),
+          React.createElement("span", {}, "背景: " + (bgKind === "image" ? bgImageName : bgKind === "gradient" ? bg.id : "无")),
+          React.createElement("span", {}, "环境: " + (typeof window.__dshDesktop !== "undefined" ? "桌面应用" : "浏览器")),
+          React.createElement("span", {}, "品牌色: " + (brand ? brandColor : "关闭")),
+          diag.root && React.createElement("span", { style: { color: "var(--dsw-alias-label-tertiary)" } }, "工作区: " + diag.root)
+        ),
 
         React.createElement("div", { style: STYLES.section },
           React.createElement("span", { style: STYLES.sectionTitle }, "品牌与字体"),

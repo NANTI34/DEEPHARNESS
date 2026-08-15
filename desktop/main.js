@@ -680,6 +680,12 @@ if (!gotLock) {
   })
 
   app.whenReady().then(() => {
+    // 每次启动清空页面 HTTP 缓存:保证工作台页面与插件 bundle 永远加载最新版
+    // (服务端升级插件后,旧的 index.html/客户端脚本缓存会导致"看起来没更新")
+    try {
+      const { session } = require('electron')
+      session.defaultSession.clearCache().then(() => bootLog('http cache cleared')).catch(() => {})
+    } catch { /* ignore */ }
     createWindow()
     createTray()
     bootAndLoad().catch(err => {
