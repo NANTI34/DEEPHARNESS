@@ -103,11 +103,11 @@ assert.strictEqual(settingsSections[0].reg.id, 'deepharness-appearance')
 assert.strictEqual(typeof settingsSections[0].reg.label, 'function')
 assert.ok(settingsSections[0].reg.label().length > 0, 'section nav label required')
 
-// 旧版遗留迁移:apply 时 resolveBackground 应将 gradient=forest 迁移为 background 新键
+// 无 background 设置时(旧版遗留 gradient 键存在):apply 应写入出厂默认背景 默认.jpg
 const migrated = JSON.parse(storage.get('deepharness.background'))
-assert.strictEqual(migrated.kind, 'gradient', 'legacy gradient must migrate to background')
-assert.strictEqual(migrated.id, 'forest', 'legacy gradient id preserved')
-console.log('legacy migration OK: gradient=forest -> background=' + storage.get('deepharness.background'))
+assert.strictEqual(migrated.kind, 'image', 'default background must be image')
+assert.strictEqual(migrated.name, '默认.jpg', 'default background must be 默认.jpg')
+console.log('default background OK: ' + storage.get('deepharness.background'))
 
 console.log('slot registrations OK:')
 for (const r of slotRegs) console.log('  -', r.name, '->', r.reg.id, r.reg.order)

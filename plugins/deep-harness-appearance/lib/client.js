@@ -633,12 +633,8 @@ window.__ModuleLoader__.load({
           if (parsed && typeof parsed.kind === "string") return parsed;
         } catch { /* fall through */ }
       }
-      const legacyGradient = lsGet("deepharness.gradient", null);
-      if (legacyGradient && legacyGradient !== "none") {
-        const next = { kind: "gradient", id: legacyGradient };
-        lsSet("deepharness.background", JSON.stringify(next));
-        return next;
-      }
+      // 出厂默认背景:仓库自带 assets/backgrounds/默认.jpg
+      // (旧版遗留的 gradient 键不再覆盖默认背景)
       const def = { kind: "image", name: DEFAULT_BG_NAME };
       lsSet("deepharness.background", JSON.stringify(def));
       return def;

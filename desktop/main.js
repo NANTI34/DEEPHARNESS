@@ -230,6 +230,9 @@ if (!gotLock) {
 
   // ── 系统托盘 / 退出流程 ───────────────────────────────────────────
   function getCloseAction() {
+    // DSH_CLOSE_ACTION 仅供冒烟测试注入,绝不写真实设置文件
+    const test = process.env.DSH_CLOSE_ACTION
+    if (test && ['ask', 'tray', 'quit-keep', 'quit-stop'].includes(test)) return test
     try {
       const a = readSettingsFile()['closeAction']
       return ['ask', 'tray', 'quit-keep', 'quit-stop'].includes(a) ? a : 'ask'
@@ -496,7 +499,26 @@ if (!gotLock) {
     win.webContents.on('render-process-gone', (_e, details) => {
       bootLog('render-process-gone', JSON.stringify(details))
     })
-    win.webContents.on('did-finish-load', () => bootLog('did-finish-load', win.webContents.getURL()))
+    // 页面加载完成后自检:增强插件的客户端标记(#deep-harness-appearance-bg)
+    // 若缺失说明服务刚就绪时 client bundle 请求失败(模块系统不自动重试),
+    // 自动刷新页面一次恢复(只重试一次,避免死循环)
+    let pluginChecked = false
+    win.webContents.on('did-finish-load', () => {
+      bootLog('did-finish-load', win.webContents.getURL())
+      if (!win.webContents.getURL().startsWith(URL_BASE)) return
+      if (pluginChecked || IS_SMOKE) return
+      pluginChecked = true
+      setTimeout(async () => {
+        try {
+          const ok = await win.webContents.executeJavaScript(
+            "!!document.getElementById('deep-harness-appearance-bg')")
+          if (!ok) {
+            bootLog('enhancement plugin missing, reloading page once')
+            win.webContents.reload()
+          }
+        } catch { /* ignore */ }
+      }, 8000)
+    })
 
     if (IS_DEBUG) win.webContents.openDevTools({ mode: 'detach' })
     bootLog('load status page')
@@ -544,9 +566,10 @@ if (!gotLock) {
   }
 
   // 冒烟测试专用:预设关闭动作并触发 win.close(),验证托盘/退出流程
+  // 注意:通过环境变量注入动作,不写真实设置文件(避免污染用户数据)
   function armSmokeClose(action) {
     if (smokeTimer) return
-    saveCloseAction(action)
+    process.env.DSH_CLOSE_ACTION = action
     setTimeout(() => {
       bootLog('smoke-close: triggering close, action=' + action)
       if (win && !win.isDestroyed()) win.close()
