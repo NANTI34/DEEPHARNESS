@@ -116,7 +116,7 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 | `logs\server.log` / `logs\server.err.log` | 服务运行日志 / 错误日志 |
 | `fonts\` | 外观插件"导入字体"的字体文件目录 |
 
-## 🎨 外观与费用(可选动态插件)
+## 🎨 工作台增强(可选动态插件)
 
 在会话中加载「DEEPHARNESS 外观与费用」动态插件(需在页面 Run 卡片授权)后:
 
@@ -128,6 +128,8 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
   - 基于会话日志中的真实 token 用量(输入缓存命中 / 未命中 / 输出)
   - **自动适配 2026-08-17 峰谷定价**:8.17 前按旧价;之后按北京时间高峰(9:00-12:00、14:00-18:00,价格翻倍)与空闲时段(半价)自动切换
   - 同时给出 flash 与 pro 两档参考价
+- **文件视图** — 会话视图栏新增「文件」标签:左侧工作区文件树(层级连线、自动隐藏 `node_modules`/`.git` 等),点击文件右侧即时预览与编辑,支持保存写回与新建文件
+- **终端面板** — 会话视图栏新增「终端」标签:工作区根目录下的命令执行器,快速运行命令并查看输出
 
 > 动态插件为进程级功能:服务重启后需重新加载插件;字体/背景选择在刷新页面后需重新设置。
 
