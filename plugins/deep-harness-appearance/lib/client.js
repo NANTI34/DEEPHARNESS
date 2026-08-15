@@ -123,11 +123,16 @@ window.__ModuleLoader__.load({
       },
       editorCol: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "6px" },
       editor: {
-        flex: 1, minHeight: 0, width: "100%", boxSizing: "border-box",
-        background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)",
-        border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px",
+        position: "absolute", inset: 0, width: "100%", height: "100%", boxSizing: "border-box",
         padding: "8px 10px", fontSize: "12.5px", lineHeight: "1.5",
-        fontFamily: "Consolas, 'Cascadia Code', monospace", resize: "none", outline: "none"
+        fontFamily: "Consolas, 'Cascadia Code', monospace", resize: "none", outline: "none",
+        whiteSpace: "pre", overflow: "auto", tabSize: 2, border: "none", margin: 0
+      },
+      editorWrap: {
+        flex: 1, minHeight: 0, position: "relative",
+        background: "var(--dsw-alias-bg-layer-1)",
+        border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px",
+        overflow: "hidden"
       },
       terminal: {
         flex: 1, minHeight: 0, width: "100%", boxSizing: "border-box",
@@ -182,6 +187,164 @@ window.__ModuleLoader__.load({
       return React.createElement("div", { style: STYLES.cost, title: "按 DeepSeek 官方定价估算,仅供参考" },
         "本会话费用 ≈ ¥" + flash.cost.toFixed(4) + "(flash) / ¥" + pro.cost.toFixed(4) + "(pro) | " +
         "输入 " + formatTokens(flash.input) + " · 缓存命中 " + formatTokens(flash.cacheRead) + " · 输出 " + formatTokens(flash.output) + " | " + tier.label
+      );
+    }
+
+    // ── 语法高亮(按文件类型,轻量正则着色)──────────────────────────
+    const HL_LIMIT = 65536; // 超过 64KB 不做高亮,保证流畅
+    const HL_LANG = {
+      js: { keywords: "const let var function return if else for while do break continue new class extends super this async await import export from default try catch finally throw switch case typeof instanceof in of null undefined true false void delete yield", line: "//", block: ["/*", "*/"] },
+      ts: { keywords: "const let var function return if else for while do break continue new class extends super this async await import export from default try catch finally throw switch case typeof instanceof in of null undefined true false void interface type enum namespace declare readonly public private protected implements abstract as keyof infer satisfies", line: "//", block: ["/*", "*/"] },
+      py: { keywords: "def class if elif else for while import from return yield lambda with as try except finally raise pass break continue global nonlocal del assert is in not and or None True False async await self", line: "#" },
+      json: { keywords: "true false null" },
+      ps1: { keywords: "function param if else elseif foreach for while switch return throw try catch finally begin process end filter workflow in not and or eq ne gt lt ge le $true $false $null New-Item Set-Content Get-Content Write-Output Write-Host Remove-Item Test-Path Join-Path Split-Path Start-Process Get-Command Push-Location Pop-Location Set-Location Get-ChildItem Select-Object ForEach-Object Where-Object Sort-Object ConvertTo-Json ConvertFrom-Json Invoke-WebRequest Import-Module Add-Type New-Object Exit Break Continue $env $error $args $input $host $PID $PSVersionTable", line: "#" },
+      java: { keywords: "public private protected class interface extends implements static final void int long double float boolean char byte short new return if else for while do switch case break continue try catch finally throw throws import package this super abstract synchronized volatile enum record var true false null instanceof", line: "//", block: ["/*", "*/"] },
+      c: { keywords: "int char float double void long short unsigned signed struct union enum typedef static extern const volatile register return if else for while do switch case break continue goto sizeof true false NULL", line: "//", block: ["/*", "*/"] },
+      cpp: { keywords: "class namespace template typename public private protected virtual override constexpr auto new delete this nullptr using friend operator inline extern const int char float double void long short unsigned signed struct union enum typedef static return if else for while do switch case break continue true false NULL", line: "//", block: ["/*", "*/"] },
+      go: { keywords: "package import func var const type struct interface map chan go defer return if else for range switch case break continue fallthrough select goto true false nil iota", line: "//", block: ["/*", "*/"] },
+      rs: { keywords: "fn let mut const struct enum impl trait mod use pub crate self Self match if else for while loop return break continue move ref async await dyn static type where true false", line: "//", block: ["/*", "*/"] },
+      sql: { keywords: "select from where insert into values update set delete create table drop alter join left right inner outer on group by order having limit offset as and or not null is in like between exists distinct count sum avg min max primary key foreign references default unique index view procedure function begin commit rollback case when then else end", line: "--", block: ["/*", "*/"] },
+      yaml: { keywords: "true false null yes no on off", line: "#" },
+      sh: { keywords: "if then else elif fi for while do done case esac function return exit export local readonly unset echo printf test true false", line: "#" },
+      html: { keywords: "", line: "", block: ["<!--", "-->"] },
+      xml: { keywords: "", line: "", block: ["<!--", "-->"] },
+      css: { keywords: "", line: "", block: ["/*", "*/"] },
+      md: { keywords: "", line: "" }
+    };
+    function langFor(name) {
+      const ext = (name || "").split(".").pop().toLowerCase();
+      if (!ext || ext === name) return null;
+      if (["js", "jsx", "mjs", "cjs"].includes(ext)) return "js";
+      if (["ts", "tsx", "mts"].includes(ext)) return "ts";
+      if (ext === "py") return "py";
+      if (ext === "json") return "json";
+      if (["ps1", "psm1"].includes(ext)) return "ps1";
+      if (ext === "java") return "java";
+      if (["c", "h"].includes(ext)) return "c";
+      if (["cpp", "cc", "hpp", "cxx"].includes(ext)) return "cpp";
+      if (ext === "go") return "go";
+      if (ext === "rs") return "rs";
+      if (ext === "sql") return "sql";
+      if (["yml", "yaml"].includes(ext)) return "yaml";
+      if (["sh", "bash"].includes(ext)) return "sh";
+      if (["html", "htm"].includes(ext)) return "html";
+      if (["xml", "svg"].includes(ext)) return "xml";
+      if (ext === "css") return "css";
+      if (["md", "markdown"].includes(ext)) return "md";
+      return null;
+    }
+    const HL_COLOR = {
+      kw: "#7C9BFF", str: "#86EFAC", com: "#64748B", num: "#FBBF24", tag: "#F472B6", attr: "#FBBF24", head: "#4D6BFE", code: "#F472B6", bold: "#7C9BFF"
+    };
+    function escHtml(s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    function highlightCode(text, langName) {
+      const lang = HL_LANG[langName];
+      if (!lang) return escHtml(text);
+      const kwSet = lang.keywords ? new Set(lang.keywords.split(" ")) : null;
+      const lineC = lang.line;
+      const blockC = lang.block;
+      const parts = [];
+      const push = (t, cls) => parts.push(cls ? '<span style="color:' + cls + '">' + escHtml(t) + "</span>" : escHtml(t));
+      let i = 0;
+      const n = text.length;
+      // markdown 特殊处理
+      if (langName === "md") {
+        const lines = text.split("\n");
+        return lines.map((ln, idx) => {
+          let out = "";
+          const head = /^(#{1,6})\s+/.exec(ln);
+          if (head) {
+            out += '<span style="color:' + HL_COLOR.head + ';font-weight:700">' + escHtml(head[0]) + "</span>";
+            out += '<span style="color:' + HL_COLOR.head + '">' + escHtml(ln.slice(head[0].length)) + "</span>";
+          } else {
+            let rest = ln;
+            const re = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+            let m, last = 0;
+            while ((m = re.exec(rest))) {
+              out += escHtml(rest.slice(last, m.index));
+              const tok = m[0];
+              if (tok.startsWith("`")) out += '<span style="color:' + HL_COLOR.code + '">' + escHtml(tok) + "</span>";
+              else if (tok.startsWith("**")) out += '<span style="color:' + HL_COLOR.bold + ';font-weight:700">' + escHtml(tok) + "</span>";
+              else if (tok.startsWith("[")) out += '<span style="color:' + HL_COLOR.str + '">' + escHtml(tok) + "</span>";
+              else out += '<span style="color:' + HL_COLOR.kw + '">' + escHtml(tok) + "</span>";
+              last = m.index + tok.length;
+            }
+            out += escHtml(rest.slice(last));
+          }
+          return out + (idx < lines.length - 1 ? "\n" : "");
+        }).join("");
+      }
+      const escKw = kwSet ? [...kwSet].map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") : "";
+      const escLineC = lineC ? lineC.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+      const escBlockS = blockC ? blockC[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+      const escBlockE = blockC ? blockC[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+      const pieces = [];
+      pieces.push(escLineC ? "(?:" + escLineC + "[^\\n]*)" : "");
+      pieces.push(escBlockS ? "(?:" + escBlockS + "[\\s\\S]*?" + escBlockE + ")" : "");
+      pieces.push('"(?:[^"\\\\\\n]|\\\\.)*"');
+      pieces.push("'(?:[^'\\\\\\n]|\\\\.)*'");
+      pieces.push("`(?:[^`\\\\\\n]|\\\\.)*`");
+      pieces.push("\\b\\d+(?:\\.\\d+)?\\b");
+      if (kwSet) pieces.push("\\b(?:" + escKw + ")\\b");
+      if (langName === "html" || langName === "xml") pieces.push("<\\/?[a-zA-Z][^>]*>");
+      const re = new RegExp(pieces.filter(Boolean).join("|"), "g");
+      let m;
+      while ((m = re.exec(text))) {
+        const tok = m[0];
+        if (i < m.index) push(text.slice(i, m.index), null);
+        i = m.index + tok.length;
+        if (lineC && tok.startsWith(lineC)) push(tok, HL_COLOR.com);
+        else if (blockC && tok.startsWith(blockC[0])) push(tok, HL_COLOR.com);
+        else if (tok.startsWith('"') || tok.startsWith("'") || tok.startsWith("`")) push(tok, HL_COLOR.str);
+        else if (/^\d/.test(tok)) push(tok, HL_COLOR.num);
+        else if (kwSet && kwSet.has(tok)) push(tok, HL_COLOR.kw);
+        else if (langName === "html" || langName === "xml") {
+          const am = /^<\/?([a-zA-Z][\w-]*)([^>]*)\/?>$/.exec(tok);
+          if (am) {
+            const inner = am[2].replace(/([a-zA-Z-]+)(=)("(?:[^"]*)"|'(?:[^']*)')?/g, (all, name, eq, val) =>
+              '<span style="color:' + HL_COLOR.attr + '">' + escHtml(name) + "</span>" + eq +
+              (val ? '<span style="color:' + HL_COLOR.str + '">' + escHtml(val) + "</span>" : ""));
+            parts.push("<" + (tok[1] === "/" ? "/" : "") + '<span style="color:' + HL_COLOR.tag + '">' + escHtml(am[1]) + "</span>" + inner + ">");
+          } else push(tok, HL_COLOR.tag);
+        } else push(tok, null);
+      }
+      if (i < n) push(text.slice(i), null);
+      return parts.join("");
+    }
+
+    // 高亮编辑器:pre 底层着色 + 透明文字 textarea 叠加(同步滚动)
+    function CodeEditor({ value, onChange, language, placeholder }) {
+      const taRef = React.useRef(null);
+      const preRef = React.useRef(null);
+      const html = React.useMemo(() => {
+        if (value.length > HL_LIMIT) return escHtml(value);
+        return highlightCode(value, language) || "";
+      }, [value, language]);
+      const sync = () => {
+        const ta = taRef.current, pre = preRef.current;
+        if (ta && pre) { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; }
+      };
+      return React.createElement("div", { style: STYLES.editorWrap },
+        React.createElement("pre", {
+          ref: preRef,
+          "aria-hidden": true,
+          style: {
+            ...STYLES.editor, overflow: "hidden", color: "#D1D5DB", pointerEvents: "none",
+            background: "transparent", whiteSpace: "pre"
+          },
+          dangerouslySetInnerHTML: { __html: html + "\n" }
+        }),
+        React.createElement("textarea", {
+          ref: taRef,
+          value: value,
+          spellCheck: false,
+          placeholder: placeholder,
+          style: { ...STYLES.editor, background: "transparent", color: "transparent", caretColor: "#CBD5E1" },
+          onChange: (e) => onChange(e.target.value),
+          onScroll: sync
+        })
       );
     }
 
@@ -312,16 +475,16 @@ window.__ModuleLoader__.load({
               }, dirty ? "保存修改" : "已保存")
             ),
             content === null
-              ? React.createElement("div", { style: { ...STYLES.editor, color: "var(--dsw-alias-label-tertiary)" } }, "← 从左侧文件树选择文件")
+              ? React.createElement("div", { style: { ...STYLES.editorWrap, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dsw-alias-label-tertiary)", fontSize: 13 } },
+                "← 从左侧文件树选择文件")
               : content.binary
-                ? React.createElement("div", { style: { ...STYLES.editor, color: "var(--dsw-alias-label-tertiary)" } },
+                ? React.createElement("div", { style: { ...STYLES.editorWrap, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dsw-alias-label-tertiary)", fontSize: 13 } },
                   "二进制文件(" + (content.size / 1024).toFixed(1) + " KB),不支持文本编辑")
-                : React.createElement("textarea", {
-                  style: STYLES.editor,
+                : React.createElement(CodeEditor, {
                   value: editing,
-                  spellCheck: false,
-                  onChange: (e) => { setEditing(e.target.value); setDirty(true); },
-                  placeholder: content.truncated ? "文件过大已截断" : ""
+                  language: langFor(content.rel),
+                  placeholder: content.truncated ? "文件过大已截断(仅显示前 2MB)" : "",
+                  onChange: (v) => { setEditing(v); setDirty(true); }
                 }),
             msg && React.createElement("div", { style: STYLES.hint }, msg)
           )
@@ -428,13 +591,34 @@ window.__ModuleLoader__.load({
     ];
     const BRAND_COLOR = "#16204A";
     const DEFAULT_BG_NAME = "默认.jpg";
+
+    // 颜色工具:hex → rgb;向目标色混合生成"同系但不同"的侧边栏色
+    function hexToRgb(hex) {
+      const h = String(hex || "").replace("#", "");
+      if (h.length !== 6) return { r: 22, g: 32, b: 74 };
+      const n = parseInt(h, 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    }
+    function mixToward(hex, targetHex, t) {
+      const a = hexToRgb(hex), b = hexToRgb(targetHex);
+      const r = Math.round(a.r + (b.r - a.r) * t);
+      const g = Math.round(a.g + (b.g - a.g) * t);
+      const bl = Math.round(a.b + (b.b - a.b) * t);
+      return "rgb(" + r + "," + g + "," + bl + ")";
+    }
+    function withAlpha(rgb, alpha) {
+      return rgb.replace("rgb(", "rgba(").replace(")", "," + alpha + ")");
+    }
+
     // 有背景时:侧栏(含顶栏标题行)/详情栏半透明毛玻璃,中间内容区半透明
-    const GLASS_CSS =
-      '[class*="sidebarCol"] { background: rgba(22,32,74,0.52) !important; ' +
-      'backdrop-filter: blur(18px) saturate(1.25) !important; -webkit-backdrop-filter: blur(18px) saturate(1.25) !important; }\n' +
-      '[class*="detailsCol"] { background: rgba(15,23,42,0.52) !important; ' +
-      'backdrop-filter: blur(18px) saturate(1.2) !important; -webkit-backdrop-filter: blur(18px) saturate(1.2) !important; }\n' +
-      '[class*="centerCol"] { background: rgba(13,18,35,0.78) !important; }';
+    function glassCss(brand, sidebar) {
+      return '[class*="sidebarCol"] { background: ' + withAlpha(sidebar, 0.52) + " !important; " +
+        'backdrop-filter: blur(18px) saturate(1.25) !important; -webkit-backdrop-filter: blur(18px) saturate(1.25) !important; }\n' +
+        '[class*="detailsCol"] { background: ' + withAlpha(sidebar, 0.5) + " !important; " +
+        'backdrop-filter: blur(18px) saturate(1.2) !important; -webkit-backdrop-filter: blur(18px) saturate(1.2) !important; }\n' +
+        '[class*="centerCol"] { background: rgba(13,18,35,0.78) !important; }\n' +
+        '[class*="sidebarCol"] [class*="_brand"] { background: ' + brand + " !important; }";
+    }
 
     function resolveBackground() {
       const raw = lsGet("deepharness.background", null);
@@ -451,6 +635,9 @@ window.__ModuleLoader__.load({
     // 应用外观(读取 localStorage;返回 disposer 用于撤销令牌覆盖)
     function applyAppearance(theme) {
       const brand = lsGet("deepharness.brand", "on") !== "off";
+      const brandColor = lsGet("deepharness.brandColor", BRAND_COLOR);
+      // 侧边栏用同系深色,不与主色相同
+      const sidebarColor = mixToward(brandColor, "#0B1220", 0.28);
       const font = lsGet("deepharness.font", "default");
       const bg = resolveBackground();
       const disposers = [];
@@ -466,10 +653,17 @@ window.__ModuleLoader__.load({
       const css = [];
       if (bgLayer) {
         css.push("html, body { background: " + bgLayer + "; background-color: #0B1220; }");
-        css.push(GLASS_CSS);
+        if (brand) {
+          css.push(glassCss(brandColor, sidebarColor));
+        } else {
+          css.push('[class*="sidebarCol"] { background: rgba(13,18,35,0.5) !important; backdrop-filter: blur(18px) saturate(1.2) !important; -webkit-backdrop-filter: blur(18px) saturate(1.2) !important; }');
+          css.push('[class*="detailsCol"] { background: rgba(13,18,35,0.5) !important; backdrop-filter: blur(18px) saturate(1.2) !important; -webkit-backdrop-filter: blur(18px) saturate(1.2) !important; }');
+          css.push('[class*="centerCol"] { background: rgba(13,18,35,0.78) !important; }');
+        }
       } else if (brand) {
-        css.push('[class*="sidebarCol"] { background: ' + BRAND_COLOR + ' !important; }');
-        css.push("html, body { background-color: #0B1220; }");
+        css.push('[class*="sidebarCol"] { background: ' + sidebarColor + ' !important; }');
+        css.push('[class*="sidebarCol"] [class*="_brand"] { background: ' + brandColor + ' !important; }');
+        css.push("html, body { background-color: " + mixToward(brandColor, "#000000", 0.35) + "; }");
       }
       injectCSS("deep-harness-appearance-bg", css.join("\n"));
 
@@ -478,8 +672,8 @@ window.__ModuleLoader__.load({
         if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(13,18,35,0.8)", dark: "rgba(13,18,35,0.8)" };
         if (brand) {
           tokens["--dsw-specific-sidebar-fill"] = {
-            light: bgLayer ? "rgba(22,32,74,0.55)" : BRAND_COLOR,
-            dark: bgLayer ? "rgba(22,32,74,0.55)" : BRAND_COLOR
+            light: bgLayer ? withAlpha(sidebarColor, 0.55) : sidebarColor,
+            dark: bgLayer ? withAlpha(sidebarColor, 0.55) : sidebarColor
           };
         }
         if (Object.keys(tokens).length > 0) {
@@ -625,6 +819,7 @@ window.__ModuleLoader__.load({
     // ── 外观设置(设置 → 通用 → DEEPHARNESS 外观)───────────────────
     function AppearanceSettings() {
       const [brand, setBrand] = React.useState(lsGet("deepharness.brand", "on") !== "off");
+      const [brandColor, setBrandColor] = React.useState(lsGet("deepharness.brandColor", BRAND_COLOR));
       const [font, setFont] = React.useState(lsGet("deepharness.font", "default"));
       const [bg, setBg] = React.useState(resolveBackground());
       const [fonts, setFonts] = React.useState([]);
@@ -650,6 +845,7 @@ window.__ModuleLoader__.load({
       }, []);
 
       const setBrandV = (v) => { lsSet("deepharness.brand", v ? "on" : "off"); setBrand(v); reload(); };
+      const setBrandColorV = (v) => { lsSet("deepharness.brandColor", v); setBrandColor(v); reload(); };
       const setFontV = (v) => { lsSet("deepharness.font", v); setFont(v); reload(); };
       const setBgV = (next) => { lsSet("deepharness.background", JSON.stringify(next)); setBg(next); reload(); };
 
@@ -718,10 +914,20 @@ window.__ModuleLoader__.load({
         React.createElement("div", { style: STYLES.section },
           React.createElement("span", { style: STYLES.sectionTitle }, "品牌与字体"),
           React.createElement("div", { style: STYLES.row },
-            React.createElement("span", { style: STYLES.label }, "品牌顶栏色"),
-            React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" } },
+            React.createElement("span", { style: STYLES.label }, "品牌色"),
+            React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" } },
               React.createElement("input", { type: "checkbox", checked: brand, onChange: (e) => setBrandV(e.target.checked) }),
-              "固定 DEEPHARNESS 品牌深蓝(" + BRAND_COLOR + "),不随主题变化")
+              "启用品牌色(顶栏/侧栏不随主题变化)")
+          ),
+          brand && React.createElement("div", { style: STYLES.row },
+            React.createElement("span", { style: STYLES.label }, "主色"),
+            React.createElement("input", {
+              type: "color", value: brandColor,
+              style: { width: 44, height: 28, padding: 0, border: "1px solid var(--dsw-alias-border-l2)", borderRadius: 6, background: "transparent", cursor: "pointer" },
+              onChange: (e) => setBrandColorV(e.target.value)
+            }),
+            React.createElement("span", { style: { ...STYLES.hint, flex: 1, minWidth: 200 } },
+              "主色用于顶栏/标题行;侧边栏自动使用同系深色(" + mixToward(brandColor, "#0B1220", 0.28) + "),两者区分不雷同")
           ),
           React.createElement("div", { style: STYLES.row },
             React.createElement("span", { style: STYLES.label }, "界面字体"),
@@ -839,11 +1045,12 @@ window.__ModuleLoader__.load({
         inject: (sessionId) => ({ sessionId })
       }, TerminalView));
 
-      // 设置 → 通用:DEEPHARNESS 外观
-      ctx.slots.inject("settings.general.item", () => slots.register({
-        name: "settings.general.item",
-        id: "deepharness",
-        order: 30
+      // 设置 → 独立区块「DEEPHARNESS 外观」(左侧导航 + 右侧全宽内容区)
+      ctx.slots.inject("settings.section", () => slots.register({
+        name: "settings.section",
+        id: "deepharness-appearance",
+        order: 90,
+        label: () => "DEEPHARNESS 外观"
       }, AppearanceSettings));
 
       // 启动即应用已保存的外观(品牌色/字体/背景),重启后自动恢复

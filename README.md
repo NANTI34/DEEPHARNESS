@@ -130,7 +130,7 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 
 **DEEPHARNESS 外观与增强插件**(`plugins\deep-harness-appearance`)由 `install.ps1` 安装进 web profile,**随服务启动自动加载**——不再像旧版"动态插件"那样需要每次在 Run 卡片授权、服务重启后全部丢失:
 
-- **顶栏品牌色固定** — 最外层侧栏与标题行使用 DEEPHARNESS 品牌深蓝(`#16204A`),不再跟随浏览器主题(设置 → 通用可关闭)
+- **品牌色自定义** — 设置 →「DEEPHARNESS 外观」独立区块:可自由挑选品牌主色,顶栏/标题行用主色,**侧边栏自动配同系深色**(两者区分不雷同),全部不随浏览器主题变化(可一键关闭)
 - **字体风格** — 默认 / 微软雅黑 / 宋体 / 楷体 / 等宽 一键切换,选择自动记忆
 - **导入字体** — 将 `.ttf` / `.woff2` 等放入 `fonts\` 目录,或在设置页直接上传(保存到 `%USERPROFILE%\.dsh\fonts`),一键应用
 - **渐变背景预设** — 暗夜蓝 / 极光紫 / 深林 / 纯色深蓝,选择自动记忆
@@ -140,8 +140,8 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
   - 基于会话投影中的真实 token 用量(输入 / 缓存命中 / 输出)
   - **自动适配 2026-08-17 峰谷定价**:8.17 前按旧价;之后按北京时间高峰(9:00-12:00、14:00-18:00,基准价)与空闲时段(半价)自动切换
   - 同时给出 flash 与 pro 两档参考价
-- **文件视图** — 会话视图栏「文件」标签:左侧工作区文件树(层级连线、自动隐藏 `node_modules`/`.git` 等),点击文件右侧即时预览与编辑,支持保存写回与新建文件
-- **终端面板** — 会话视图栏「终端」标签:工作区根目录下的命令执行器(PowerShell),快速运行命令并查看输出
+- **文件视图** — 会话视图栏「文件」标签:左侧工作区文件树(层级连线、自动隐藏 `node_modules`/`.git` 等),点击文件右侧即时预览与编辑,支持保存写回与新建文件;**代码按文件类型自动语法高亮**(JS/TS/Python/JSON/PowerShell/Java/C/C++/Go/Rust/SQL/YAML/HTML/CSS/Markdown 等,大文件自动降级保流畅)
+- **终端面板** — 会话视图栏「终端」标签:工作区根目录下的命令执行器(PowerShell),快速运行命令并查看输出,支持命令历史与清屏
 
 > 插件工作原理:host 半在 `webServer` 上注册 `/deepharness/api/*` 路由(文件树/读写、命令执行、字体与背景图托管),浏览器半通过 DSH 的 `dsh.client` 机制自动加载(会话视图栏标签 + 设置项)。背景生效机制:背景承载在 `html/body`,同时用主题令牌把框架/侧栏变为半透明 + `backdrop-filter` 毛玻璃。文件路径做了工作区包含校验,越界请求一律拒绝。
 >

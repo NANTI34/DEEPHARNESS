@@ -100,20 +100,22 @@ export function apply(ctx) {
     if (depth <= 0) return out
     const dirents = await fsp.readdir(target, { withFileTypes: true })
     const children = []
-    for (const entry of dirents) {
-      if (children.length >= MAX_TREE_ENTRIES) break
-      const name = entry.name
-      if (IGNORED_NAMES.has(name)) continue
-      const childAbs = path.join(target, name)
-      const childIsDir = entry.isDirectory()
-      if (!childIsDir && IGNORED_FILE_RE.test(name)) continue
+    const sizes = await Promise.all(dirents.slice(0, MAX_TREE_ENTRIES).map(async (entry) => {
+      if (IGNORED_NAMES.has(entry.name)) return null
+      if (!entry.isDirectory() && IGNORED_FILE_RE.test(entry.name)) return null
       let size
-      if (!childIsDir) {
-        try { size = (await fsp.stat(childAbs)).size } catch { size = 0 }
+      if (!entry.isDirectory()) {
+        try { size = (await fsp.stat(path.join(target, entry.name))).size } catch { size = 0 }
       }
+      return { entry, size }
+    }))
+    for (const item of sizes) {
+      if (!item || children.length >= MAX_TREE_ENTRIES) continue
+      const { entry, size } = item
+      const childIsDir = entry.isDirectory()
       children.push({
-        name,
-        rel: relOf(childAbs),
+        name: entry.name,
+        rel: relOf(path.join(target, entry.name)),
         type: childIsDir ? 'dir' : 'file',
         size: childIsDir ? undefined : size
       })
@@ -252,7 +254,7 @@ export function apply(ctx) {
     sendJson(res, 200, {
       ok: true,
       plugin: name,
-      version: '1.1.0',
+      version: '1.2.0',
       root,
       dshHome,
       fontsDirs,

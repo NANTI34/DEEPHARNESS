@@ -5,8 +5,8 @@ node_modules/
 logs/
 *.log
 
-# stale QA slide renders (regenerate manually when needed)
-docs/qa/
+# local presentation materials (PPT / copywriting / slide renders — not published)
+docs/
 
 # os junk
 Thumbs.db

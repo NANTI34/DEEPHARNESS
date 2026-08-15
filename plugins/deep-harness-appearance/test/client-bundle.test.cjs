@@ -92,9 +92,11 @@ for (const tab of viewTabs) {
   const props = tab.inject('session-test-1')
   assert.strictEqual(props.sessionId, 'session-test-1')
 }
-const settingsRows = slotRegs.filter(r => r.name === 'settings.general.item')
-assert.strictEqual(settingsRows.length, 1, 'one settings.general.item row expected')
-assert.strictEqual(settingsRows[0].reg.id, 'deepharness')
+const settingsSections = slotRegs.filter(r => r.name === 'settings.section')
+assert.strictEqual(settingsSections.length, 1, 'one settings.section expected')
+assert.strictEqual(settingsSections[0].reg.id, 'deepharness-appearance')
+assert.strictEqual(typeof settingsSections[0].reg.label, 'function')
+assert.ok(settingsSections[0].reg.label().length > 0, 'section nav label required')
 
 console.log('slot registrations OK:')
 for (const r of slotRegs) console.log('  -', r.name, '->', r.reg.id, r.reg.order)
