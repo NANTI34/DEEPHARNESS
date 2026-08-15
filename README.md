@@ -116,6 +116,7 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 
 ### 退出与系统托盘
 
+
 关闭 DEEPHARNESS 窗口时会弹出询问(可勾选"记住选择"):
 
 | 选项 | 行为 |

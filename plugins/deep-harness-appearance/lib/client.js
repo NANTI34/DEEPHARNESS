@@ -517,26 +517,80 @@ window.__ModuleLoader__.load({
       const [history, setHistory] = React.useState([]);
       const [historyIdx, setHistoryIdx] = React.useState(-1);
       const outputRef = React.useRef(null);
-      const [root, setRoot] = React.useState(null);
+      const [root, setRoot] = React.useState("");
+      // 会话内工作目录(相对工作区根),支持 cd 并持久到本次会话
+      const [cwd, setCwd] = React.useState(".");
 
       React.useEffect(() => {
-        apiGet("/status").then(d => setRoot(d.root)).catch(() => setRoot(""));
+        apiGet("/status").then(d => setRoot(d.root || "")).catch(() => setRoot(""));
       }, []);
       React.useEffect(() => {
         const el = outputRef.current;
         if (el) el.scrollTop = el.scrollHeight;
       }, [lines]);
 
+      const fullPath = (rel) => {
+        const relStr = rel === "." ? "" : rel.split("/").join("\\");
+        return root ? (root + (relStr ? "\\" + relStr : "")) : (relStr || ".");
+      };
+
+      // 解析相对路径(支持 . .. 与绝对路径),返回相对工作区根的路径
+      const resolveRel = (target) => {
+        const t = String(target || "").trim();
+        if (!t) return ".";
+        let rel;
+        if (/^[a-zA-Z]:[\\/]/.test(t)) {
+          rel = t.replace(/\\/g, "/");
+        } else {
+          const base = cwd === "." ? "" : cwd;
+          rel = (base ? base + "/" : "") + t.replace(/\\/g, "/");
+        }
+        const parts = rel.split("/");
+        const out = [];
+        for (const p of parts) {
+          if (p === "" || p === ".") continue;
+          if (p === "..") { out.pop(); continue; }
+          out.push(p);
+        }
+        return out.join("/") || ".";
+      };
+
+      const doCd = async (command) => {
+        let arg = command.replace(/^cd\s*/i, "").trim();
+        if (arg.length >= 2 && ((arg[0] === '"' && arg[arg.length - 1] === '"') || (arg[0] === "'" && arg[arg.length - 1] === "'"))) {
+          arg = arg.slice(1, -1);
+        }
+        const rel = resolveRel(arg);
+        try {
+          const d = await apiGet("/tree?path=" + encodeURIComponent(rel) + "&depth=0");
+          if (d.tree && d.tree.type === "dir") {
+            setCwd(rel);
+            setLines(prev => [...prev, { type: "cmd", text: "❯ " + command }, { type: "sys", text: "当前目录: " + fullPath(rel) }]);
+          } else {
+            setLines(prev => [...prev, { type: "cmd", text: "❯ " + command }, { type: "err", text: "cd: 不是目录或不存在: " + (arg || ".") }]);
+          }
+        } catch (err) {
+          setLines(prev => [...prev, { type: "cmd", text: "❯ " + command }, { type: "err", text: "cd 失败: " + String(err.message || err) }]);
+        }
+      };
+
       const run = async (cmd) => {
         const command = cmd.trim();
         if (!command || busy) return;
+        if (/^cd(\s|$)/i.test(command)) {
+          setValue("");
+          setHistory(prev => [command, ...prev].slice(0, 50));
+          setHistoryIdx(-1);
+          await doCd(command);
+          return;
+        }
         setLines(prev => [...prev, { type: "cmd", text: "❯ " + command }]);
         setValue("");
         setHistory(prev => [command, ...prev].slice(0, 50));
         setHistoryIdx(-1);
         setBusy(true);
         try {
-          const d = await apiPost("/exec", { command, timeoutMs: 60000 });
+          const d = await apiPost("/exec", { command, cwd, timeoutMs: 60000 });
           if (d.stdout) setLines(prev => [...prev, { type: "out", text: d.stdout.replace(/\n$/, "") }]);
           if (d.stderr) setLines(prev => [...prev, { type: "err", text: d.stderr.replace(/\n$/, "") }]);
           setLines(prev => [...prev, {
@@ -552,6 +606,14 @@ window.__ModuleLoader__.load({
 
       return React.createElement("div", { style: STYLES.panel },
         React.createElement(CostLine, { useProjection }),
+        React.createElement("div", {
+          style: {
+            flex: "none", padding: "4px 10px", borderRadius: 7, fontSize: 12,
+            color: "var(--dsw-alias-label-tertiary)",
+            background: "rgba(77,107,254,0.08)", border: "1px solid rgba(77,107,254,0.2)",
+            fontFamily: "Consolas, monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
+          }
+        }, "📁 当前目录: " + (root ? fullPath(cwd) : (cwd === "." ? "…" : cwd))),
         React.createElement("div", { ref: outputRef, style: STYLES.terminal },
           lines.map((line, i) => {
             const color = line.type === "err" ? "#F87171" : line.type === "cmd" ? "#93C5FD" : line.type === "sys" ? "#6B7280" : "#D1D5DB";
@@ -560,11 +622,12 @@ window.__ModuleLoader__.load({
           busy && React.createElement("div", { style: { color: "#6B7280" } }, "… 运行中")
         ),
         React.createElement("div", { style: STYLES.cmdInput },
-          React.createElement("span", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: 13 } }, "❯"),
+          React.createElement("span", { style: { color: "var(--dsw-alias-label-tertiary)", fontSize: 13, whiteSpace: "nowrap" } },
+            cwd === "." ? "❯" : (cwd.split("/").pop() + ">")),
           React.createElement("input", {
             style: STYLES.input,
             value: value,
-            placeholder: root ? ("在 " + root + " 下运行(Enter 执行,↑↓ 历史)") : "输入命令…",
+            placeholder: root ? (fullPath(cwd) + " 下运行(Enter 执行,↑↓ 历史)") : "输入命令…",
             spellCheck: false,
             disabled: busy,
             onChange: (e) => setValue(e.target.value),
