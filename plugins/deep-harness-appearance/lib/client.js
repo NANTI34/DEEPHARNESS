@@ -785,7 +785,19 @@ window.__ModuleLoader__.load({
           '[class*="editorWrap"], [class*="treeCol"], [class*="terminal"], textarea, pre { border-color: rgba(212,175,55,0.32) !important; }\n' +
           'button:not([class*="iconButton"]):hover { border-color: rgba(212,175,55,0.55) !important; }\n' +
           '::selection { background: rgba(212,175,55,0.35) !important; }\n' +
-          '[class*="cost"], [class*="panel"] [class*="row"] { border-left: 2px solid rgba(212,175,55,0.35) !important; }\n');
+          '[class*="cost"], [class*="panel"] [class*="row"] { border-left: 2px solid rgba(212,175,55,0.35) !important; }\n' +
+          // 金边延伸:对话框与各页面内部区域(仅描边/内阴影,不影响布局)
+          '[role="dialog"], [class*="modal"], [class*="popover"], [class*="dropdown"], [class*="tooltip"] { border-color: rgba(212,175,55,0.45) !important; }\n' +
+          '[role="dialog"] { box-shadow: 0 0 40px rgba(212,175,55,0.18), var(--dsw-shadow-lv3) !important; }\n' +
+          '[role="dialog"] [class*="header"], [role="dialog"] [class*="title"], [class*="modal"] [class*="header"] { border-bottom: 1px solid rgba(212,175,55,0.35) !important; }\n' +
+          '[class*="message"], [class*="chatItem"], [class*="bubble"], [class*="nodeItem"], [class*="sessionItem"] { border: 1px solid rgba(212,175,55,0.22) !important; }\n' +
+          '[class*="message"]:hover, [class*="chatItem"]:hover, [class*="bubble"]:hover { border-color: rgba(212,175,55,0.45) !important; }\n' +
+          '[class*="composer"], [class*="inputArea"], [class*="promptBox"], [class*="sendBar"] { border: 1px solid rgba(212,175,55,0.40) !important; }\n' +
+          '[class*="composer"]:focus-within, [class*="inputArea"]:focus-within { border-color: rgba(212,175,55,0.75) !important; box-shadow: 0 0 18px rgba(212,175,55,0.20) !important; }\n' +
+          '[class*="tab"][class*="active"], [class*="tabs"] [aria-selected="true"], [class*="navCell"][class*="active"] { border-bottom: 2px solid rgba(212,175,55,0.75) !important; }\n' +
+          '[class*="stats"], [class*="chartCard"], [class*="metricCard"], [class*="detailCard"], [class*="card"] { border: 1px solid rgba(212,175,55,0.28) !important; }\n' +
+          '[class*="workspace"], [class*="projectCard"], [class*="envCard"], [class*="settingCard"] { border: 1px solid rgba(212,175,55,0.30) !important; }\n' +
+          '[class*="workspace"]:hover, [class*="projectCard"]:hover, [class*="envCard"]:hover { border-color: rgba(212,175,55,0.55) !important; }\n');
       } else {
         injectCSS("deep-harness-appearance-gold", "");
       }

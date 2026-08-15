@@ -8,6 +8,7 @@ independent desktop application.
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import math
 import os
@@ -112,8 +113,19 @@ def run_headless(recorder: EventRecorder) -> int:
 def run_visual(recorder: EventRecorder, snapshot_path: Path | None = None) -> int:
     try:
         from PySide6.QtCore import QObject, QPoint, Qt, QTimer, Signal
-        from PySide6.QtGui import QColor, QFont, QFontMetrics, QMouseEvent, QPainter, QPen, QPixmap
-        from PySide6.QtWidgets import QApplication, QMenu, QWidget
+        from PySide6.QtGui import QColor, QFont, QFontMetrics, QMouseEvent, QPainter, QPen, QPixmap, QTextCursor
+        from PySide6.QtWidgets import (
+            QApplication,
+            QDialog,
+            QFrame,
+            QHBoxLayout,
+            QLineEdit,
+            QMenu,
+            QPushButton,
+            QTextBrowser,
+            QVBoxLayout,
+            QWidget,
+        )
     except ImportError:
         print(
             "PySide6 is required for visual mode. Run with --headless for protocol tests.",
@@ -186,6 +198,7 @@ def run_visual(recorder: EventRecorder, snapshot_path: Path | None = None) -> in
             self.drag_origin: QPoint | None = None
             self.window_origin: QPoint | None = None
             self.dragging = False
+            self.chat_dialog: FishChatDialog | None = None
             self.last_tick_ms = self._now_ms()
             self.animation_timer = QTimer(self)
             self.animation_timer.timeout.connect(self._tick)
@@ -530,6 +543,18 @@ def run_visual(recorder: EventRecorder, snapshot_path: Path | None = None) -> in
             self.dragging = False
 
         def _play_click_interaction(self, x: float, y: float) -> None:
+            # 点击状态卡右上角的 ⋯(思考/干活中图标)打开聊天对话框
+            card = self._current_card()
+            if card is not None:
+                card_x = 14
+                card_y = 7
+                card_width = self.width() - 28
+                card_height = 84
+                icon_cx = card_x + card_width - 39
+                icon_cy = card_y + card_height // 2
+                if (x - icon_cx) ** 2 + (y - icon_cy) ** 2 <= 34 ** 2:
+                    self._open_chat()
+                    return
             pet_height = int(manifest["maxFrameHeight"]) * self.scale
             pet_top = self.height() - pet_height - 8
             relative_y = max(0.0, y - pet_top)
@@ -542,6 +567,13 @@ def run_visual(recorder: EventRecorder, snapshot_path: Path | None = None) -> in
             else:
                 self.model.play_overlay("poke")
                 self._show_overlay("戳我干嘛，任务还在跑呢", self.status_detail, self.status_state, 1500)
+
+        def _open_chat(self) -> None:
+            if self.chat_dialog is None:
+                self.chat_dialog = FishChatDialog(self)
+            self.chat_dialog.show()
+            self.chat_dialog.raise_()
+            self.chat_dialog.activateWindow()
 
         def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
             if event.button() == Qt.MouseButton.LeftButton:
@@ -585,6 +617,134 @@ def run_visual(recorder: EventRecorder, snapshot_path: Path | None = None) -> in
                 emit_reply("closed", reason="user")
                 QApplication.quit()
 
+    class FishChatDialog(QDialog):
+        """与大肥鱼聊天的对话框:点状态卡右上角的 ⋯ 打开。"""
+
+        def __init__(self, pet: CompanionWindow) -> None:
+            super().__init__(pet, Qt.WindowType.Window)
+            self.pet = pet
+            self._typing = False
+            self._last_user = ""
+            self.setWindowTitle("大肥鱼 · 聊天")
+            self.resize(380, 520)
+            self.setMinimumSize(320, 420)
+            self.setFont(QFont("Microsoft YaHei UI", 10))
+
+            self.view = QTextBrowser(self)
+            self.view.setOpenExternalLinks(False)
+            self.view.setReadOnly(True)
+            self.view.setFrameShape(QFrame.Shape.NoFrame)
+
+            self.input = QLineEdit(self)
+            self.input.setPlaceholderText("和大肥鱼说点什么… (Enter 发送)")
+            self.input.returnPressed.connect(self._send)
+
+            self.send = QPushButton("发送", self)
+            self.send.clicked.connect(self._send)
+
+            layout = QVBoxLayout(self)
+            layout.addWidget(self.view, 1)
+            row = QHBoxLayout()
+            row.addWidget(self.input, 1)
+            row.addWidget(self.send)
+            layout.addLayout(row)
+
+            self._append_message("fish", self._greeting())
+            self._position_near_pet()
+
+        def _greeting(self) -> str:
+            state = self.pet.display_state or "IDLE"
+            label = CompanionWindow.LABELS.get(state, state)
+            task = (self.pet.task or "").strip()
+            if state in {"THINKING", "WORKING", "WAITING", "ERROR"}:
+                return f"你来啦~ 我现在{label}中" + (f": {task}" if task else "") + "。想聊什么?"
+            return "你来啦~ 我正闲着，想聊什么?"
+
+        def _position_near_pet(self) -> None:
+            pet = self.pet
+            screen = QApplication.screenAt(pet.frameGeometry().center()) or QApplication.primaryScreen()
+            geometry = screen.availableGeometry() if screen is not None else None
+            x = pet.x() + pet.width() + 12
+            y = pet.y()
+            if geometry is not None:
+                if x + self.width() > geometry.right():
+                    x = pet.x() - self.width() - 12
+                x = max(geometry.left(), min(x, geometry.right() - self.width() + 1))
+                y = max(geometry.top(), min(y, geometry.bottom() - self.height() + 1))
+            self.move(x, y)
+
+        def _bubble_html(self, who: str, text: str) -> str:
+            align = "right" if who == "user" else "left"
+            background = "#3478F6" if who == "user" else "#F4F6F8"
+            color = "#FFFFFF" if who == "user" else "#25282D"
+            safe = html.escape(text).replace("\n", "<br/>")
+            return (
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
+                f'<td align="{align}"><table cellpadding="0" cellspacing="0" border="0"><tr>'
+                f'<td style="background:{background};color:{color};border-radius:12px;padding:8px 12px;'
+                f'font-size:13px;">{safe}</td></tr></table></td></tr></table>'
+            )
+
+        def _append_message(self, who: str, text: str) -> None:
+            if who == "user":
+                self._last_user = text
+            cursor = self.view.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            cursor.insertBlock()
+            cursor.insertHtml(self._bubble_html(who, text))
+            self.view.setTextCursor(cursor)
+            bar = self.view.verticalScrollBar()
+            QTimer.singleShot(0, lambda: bar.setValue(bar.maximum()))
+
+        def _send(self) -> None:
+            text = self.input.text().strip()
+            if not text or self._typing:
+                return
+            self._append_message("user", text)
+            self.input.clear()
+            self._typing = True
+            self.send.setEnabled(False)
+            QTimer.singleShot(random.randint(350, 900), self._reply_now)
+
+        def _reply_now(self) -> None:
+            self._typing = False
+            self.send.setEnabled(True)
+            self._append_message("fish", self._reply(self._last_user))
+
+        def _reply(self, text: str) -> str:
+            t = text.strip().lower()
+            state = self.pet.display_state or "IDLE"
+            label = CompanionWindow.LABELS.get(state, state)
+            task = (self.pet.task or "").strip()
+            working = state in {"THINKING", "WORKING", "WAITING", "ERROR"}
+
+            def pick(*choices: str) -> str:
+                return random.choice(choices)
+
+            if any(k in t for k in ("你好", "哈喽", "嗨", "hello", "hi", "在吗", "早上好", "中午好", "下午好", "晚上好", "早呀")):
+                return pick("你好呀~ 我在这儿陪着你呢", "嗨!今天也要加油哦", "你来了!我正等你找我玩呢")
+            if any(k in t for k in ("辛苦", "谢谢", "感谢", "么么", "爱你", "喜欢", "好棒", "真棒")):
+                return pick("不客气不客气~", "嘿嘿，能帮上忙就好", "被夸得不好意思了>///<", "小事一桩，继续加油!")
+            if any(k in t for k in ("名字", "你是谁", "叫啥")):
+                return pick("我叫大肥鱼，是 DSH 的桌面小助手~", "大肥鱼!专职陪聊、看进度、摸鱼!")
+            if any(k in t for k in ("干嘛", "干什么", "忙什么", "任务", "进度", "状态", "怎么样")):
+                if working:
+                    return f"我在{label}中哦" + (f": {task}" if task else "") + "。"
+                return pick("我现在没事干，正摸鱼呢~", "状态:休息中，随时待命!")
+            if any(k in t for k in ("胖", "丑", "笨", "讨厌", "滚", "走开", "傻")):
+                return pick("哼，你这么说我可要生气啦", "鱼鱼很生气，后果很严重!", "(假装没听见)", "再说我就要罢工了!")
+            if any(k in t for k in ("隐藏", "消失", "再见", "拜拜", "走了", "晚安")):
+                return pick("拜拜~ 我在这儿等你回来", "下次再来找我玩哦!", "晚安!做个好梦~")
+            if any(k in t for k in ("多大", "几岁", "多少岁")):
+                return "我可是永远年轻的鱼，岁数保密~"
+            if any(k in t for k in ("吃什么", "饿")):
+                return "鱼鱼不用吃饭，靠 DSH 的电量就能活!"
+            if t.endswith("?") or t.endswith("？"):
+                return pick("嗯…让我想想!(其实鱼鱼也不知道)", "这个问题有点难，等我问问 DSH 大老板?")
+            if working:
+                return pick(f"我在{label}呢，先不聊啦~", f"{label}中…等我忙完再陪你!", "任务还在跑，我边看边听你说!")
+            return pick("嗯嗯，我在听~", "鱼鱼正在摸鱼，你说什么我都赞成!", "你说得对!(其实没听懂)", "有意思，继续说!", "我只是一条鱼，你懂的~")
+
     application = QApplication(sys.argv[:1])
     application.setQuitOnLastWindowClosed(False)
     inbox = Inbox()
@@ -608,6 +768,8 @@ def run_visual(recorder: EventRecorder, snapshot_path: Path | None = None) -> in
     reader = threading.Thread(target=read_stdin, name="dsh-bigfish-stdin", daemon=True)
     reader.start()
     window.show()
+    if os.environ.get("DSH_DAFEIYU_OPEN_CHAT") == "1":
+        window._open_chat()
     emit_reply("ready")
     code = application.exec()
     recorder.close()
