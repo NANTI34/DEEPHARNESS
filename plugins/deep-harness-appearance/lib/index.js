@@ -257,7 +257,7 @@ export function apply(ctx) {
     sendJson(res, 200, {
       ok: true,
       plugin: name,
-      version: '1.4.0',
+      version: '1.5.0',
       root,
       dshHome,
       fontsDirs,
@@ -352,9 +352,10 @@ export function apply(ctx) {
     if (!file) throw new Error('background not found')
     const data = await fsp.readFile(file)
     const mime = BG_MIME[path.extname(file).toLowerCase()] || 'image/jpeg'
+    // 壁纸按名称寻址(换背景即换 URL),允许长缓存,避免每次打开页面重复下载
     res.writeHead(200, {
       'content-type': mime,
-      'cache-control': 'no-store',
+      'cache-control': 'private, max-age=86400',
       'content-length': data.length
     })
     res.end(data)

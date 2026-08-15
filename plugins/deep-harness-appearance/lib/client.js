@@ -613,13 +613,15 @@ window.__ModuleLoader__.load({
     // 有背景时:侧栏(含顶栏标题行)/详情栏半透明,中间内容区半透明。
     // 注意:绝不能在这里用 backdrop-filter——它会创建新的包含块,
     // 把设置面板(position:fixed 全屏浮层)困在侧边栏里,导致设置页挤成一团。
+    // 侧边栏用"调亮的品牌蓝"半透明,避免深蓝叠暗壁纸后看起来纯黑。
     function glassCss(brandColor) {
       const rgb = hexToRgb(brandColor);
       const rgba = (a) => "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + "," + a + ")";
-      return '[class*="sidebarCol"] { background: ' + rgba(0.45) + " !important; }\n" +
-        '[class*="detailsCol"] { background: rgba(15,23,42,0.35) !important; }\n' +
-        '[class*="centerCol"] { background: rgba(8,12,25,0.35) !important; }\n' +
-        '[class*="sidebarCol"] [class*="_brand"] { background: ' + rgba(0.6) + " !important; }";
+      const bright = mixToward(brandColor, "#5B7CFA", 0.38);
+      return '[class*="sidebarCol"] { background: ' + withAlpha(bright, 0.5) + " !important; }\n" +
+        '[class*="detailsCol"] { background: rgba(21,30,58,0.4) !important; }\n' +
+        '[class*="centerCol"] { background: rgba(8,12,25,0.28) !important; }\n' +
+        '[class*="sidebarCol"] [class*="_brand"] { background: ' + rgba(0.62) + " !important; }";
     }
 
     // 背景选择:新键优先;迁移旧版遗留(gradient 存于 background 键出现之前);
@@ -680,11 +682,17 @@ window.__ModuleLoader__.load({
 
       if (theme) {
         const tokens = {};
-        if (bgLayer) tokens["--dsw-alias-bg-base"] = { light: "rgba(8,12,25,0.12)", dark: "rgba(8,12,25,0.12)" };
+        if (bgLayer) {
+          tokens["--dsw-alias-bg-base"] = { light: "rgba(8,12,25,0.12)", dark: "rgba(8,12,25,0.12)" };
+          // 内容卡片(聊天/轨迹/列表)半透明,壁纸不再被大片纯色盖住
+          tokens["--dsw-alias-bg-layer-1"] = { light: "rgba(17,24,48,0.72)", dark: "rgba(17,24,48,0.72)" };
+          tokens["--dsw-alias-bg-layer-2"] = { light: "rgba(21,30,58,0.78)", dark: "rgba(21,30,58,0.78)" };
+        }
         if (brand) {
+          const bright = mixToward(brandColor, "#5B7CFA", 0.38);
           tokens["--dsw-specific-sidebar-fill"] = {
-            light: bgLayer ? withAlpha(sidebarColor, 0.5) : sidebarColor,
-            dark: bgLayer ? withAlpha(sidebarColor, 0.55) : sidebarColor
+            light: bgLayer ? withAlpha(bright, 0.52) : sidebarColor,
+            dark: bgLayer ? withAlpha(bright, 0.52) : sidebarColor
           };
         }
         if (Object.keys(tokens).length > 0) {
