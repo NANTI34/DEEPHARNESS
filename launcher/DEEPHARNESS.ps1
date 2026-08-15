@@ -10,11 +10,13 @@
     powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1
     powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Port 8080
     powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -NoOpen
+    powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -AppMode   # Electron 桌面窗口(未安装则回退 Edge)
 #>
 param(
     [int]$Port = 3080,
     [string]$Workspace = '',
-    [switch]$NoOpen
+    [switch]$NoOpen,
+    [switch]$AppMode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +28,8 @@ $LogDir = Join-Path $Root 'logs'
 $Url    = "http://127.0.0.1:$Port"
 $Bins   = Join-Path $AppDir 'lib\bin.js'
 if (-not $Workspace) { $Workspace = $Root }
+$EdgeExe = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+if (-not (Test-Path $EdgeExe)) { $EdgeExe = 'C:\Program Files\Microsoft\Edge\Application\msedge.exe' }
 
 function Find-Node {
     if ($env:NODE -and (Test-Path $env:NODE)) { return $env:NODE }
@@ -54,6 +58,20 @@ function Test-DshUp([string]$u) {
     } catch { return $false }
 }
 
+# API 探测:确保 RPC 网关就绪(HTML 就绪不代表 API 就绪,避免
+# 浏览器打开后出现 "Failed to fetch" 的加载失败)
+function Test-ApiUp([string]$base) {
+    try {
+        $r = Invoke-WebRequest -Uri "$base/api/session.list" -Method Post -Body '{"rpcId":"probe"}' `
+            -ContentType 'application/json' -UseBasicParsing -TimeoutSec 5
+        return ($r.StatusCode -eq 200)
+    } catch { return $false }
+}
+
+function Test-AllUp([string]$u, [string]$base) {
+    return (Test-PortOpen $Port) -and (Test-DshUp $u) -and (Test-ApiUp $base)
+}
+
 # 0. 依赖检查
 if (-not (Test-Path (Join-Path $AppDir 'node_modules'))) {
     [System.Windows.Forms.MessageBox]::Show(
@@ -74,7 +92,7 @@ if (-not $node) {
 }
 
 # 1. 服务未运行则后台启动
-$up = (Test-PortOpen $Port) -and (Test-DshUp $Url)
+$up = Test-AllUp $Url $Url
 if (-not $up) {
     New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
     $outLog = Join-Path $LogDir 'server.log'
@@ -89,7 +107,7 @@ if (-not $up) {
     $ok = $false
     for ($i = 0; $i -lt 120; $i++) {
         Start-Sleep -Milliseconds 500
-        if ((Test-PortOpen $Port) -and (Test-DshUp $Url)) { $ok = $true; break }
+        if (Test-AllUp $Url $Url) { $ok = $true; break }
         if ($proc.HasExited) { break }
     }
     if (-not $ok) {
@@ -105,7 +123,17 @@ if (-not $up) {
     }
 }
 
-# 2. 打开界面(默认浏览器);-NoOpen 仅启动/检测服务(供测试与脚本调用)
+# 2. 打开界面;-NoOpen 仅启动/检测服务(供测试与脚本调用)
+#    -AppMode 优先打开 Electron 桌面壳(真正的原生应用窗口);
+#    桌面壳未安装时回退 Edge 应用窗口;再不行回退默认浏览器
+$DesktopExe = Join-Path $Root 'desktop\node_modules\electron\dist\electron.exe'
+$DesktopMain = Join-Path $Root 'desktop\main.js'
 if (-not $NoOpen) {
-    Start-Process $Url
+    if ($AppMode -and (Test-Path $DesktopExe) -and (Test-Path $DesktopMain)) {
+        Start-Process $DesktopExe -ArgumentList @('"' + $DesktopMain + '"') -WorkingDirectory $Root
+    } elseif ($AppMode -and (Test-Path $EdgeExe)) {
+        Start-Process $EdgeExe -ArgumentList @('--app=' + $Url)
+    } else {
+        Start-Process $Url
+    }
 }

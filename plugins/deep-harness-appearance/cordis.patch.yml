@@ -1,0 +1,6 @@
+# DEEPHARNESS 常驻增强插件 patch:一个 host 行(路由/能力)+ 自动发现的 client 行
+# 安装方式:`dsh plugin --profile web add <本目录>`(由 install.ps1 自动完成)
+# 生效方式:随服务启动自动加载,重启后无需重新授权(对比旧版"动态插件"的进程级临时加载)
+- insert:
+    - id: deep-harness-appearance
+      name: 'deep-harness-appearance'

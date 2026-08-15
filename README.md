@@ -1,10 +1,10 @@
-# DEEPHARNESS — DeepSeek Harness Windows 桌面版
+# DEEPHARNESS — DeepSeek Harness Windows 桌面应用
 
-> 把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 变成 Windows 桌面应用:一条命令安装,桌面快捷方式一键打开你的 AI 工作台。
+> 把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 变成**真正的 Windows 桌面应用**:一条命令安装,双击桌面图标,原生应用窗口打开你的 AI 工作台——不是浏览器套壳。
 
 ![logo](tools/logo.png)
 
-![MIT License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg) ![Node](https://img.shields.io/badge/node-%3E%3D20-339933.svg) ![Version](https://img.shields.io/badge/dsh-0.1.0--rc.6-4D6BFE.svg)
+![MIT License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg) ![Node](https://img.shields.io/badge/node-%3E%3D20-339933.svg) ![Version](https://img.shields.io/badge/version-0.2.0-4D6BFE.svg)
 
 ---
 
@@ -12,55 +12,59 @@
 
 **DeepSeek Harness (DSH)** 是 DeepSeek 官方的开源 AI 智能体工作台:一个运行在你自己电脑上的全栈 Agent 运行时,提供浏览器操作界面、技能(Skill)系统、多模型路由、沙箱文件系统、子代理编排等能力,数据完全保存在本地。
 
-**DEEPHARNESS 项目**为 DSH 做了 Windows 桌面化封装,解决三个日常痛点:
+**DEEPHARNESS 项目**把 DSH 变成了一款 Windows 原生桌面应用,解决四个日常痛点:
 
 | 痛点 | 本项目的解法 |
 |---|---|
 | 每次都要敲命令启动服务 | 桌面快捷方式一键启动,自动检测/拉起服务 |
-| 命令行黑窗口难看、容易误关 | 无控制台窗口(隐藏 PowerShell 调用),服务常驻后台 |
-| 不知道服务有没有在跑 | 启动器先探测端口,已有服务直接复用,绝不重复启动 |
+| 命令行黑窗口难看、容易误关 | 无控制台窗口,服务常驻后台 |
+| 浏览器标签页不像"应用" | **Electron 原生应用窗口**(独立任务栏图标、无地址栏),浏览器仅为备选入口 |
+| 增强功能(文件/终端/外观)重启就丢 | **常驻增强插件**随服务自动加载,重启后依然在 |
 
 ## ✨ 特性
 
-- 🚀 **一键启动** — 双击桌面快捷方式:检测服务 → (未运行则后台启动)→ 打开工作台
-- 🧠 **智能探测** — 先 TCP 探测端口,再用 `__DSH_BOOT__` 页面标记确认确实是 DSH 服务,避免误用他人端口
-- 🖥️ **双模式体验** — 默认浏览器打开(火狐等)+ 可选 Edge 应用模式独立窗口,更像原生桌面应用
+- 🖥️ **原生桌面应用** — Electron 窗口加载工作台:独立窗口、任务栏图标、无地址栏/标签页/浏览器菜单,窗口大小与位置自动记忆(`%USERPROFILE%\.dsh\app\window-state.json`)
+- 🚀 **一键启动** — 双击桌面快捷方式:检测服务 → (未运行则后台启动)→ 原生窗口打开工作台,重复双击只会聚焦已有窗口
+- 🧠 **智能探测** — 先 TCP 探测端口,再用 `__DSH_BOOT__` 页面标记 + API 探测双重确认确实是 DSH 服务,避免误用他人端口
+- 📁 **文件视图(常驻)** — 会话视图栏「文件」标签:工作区文件树(自动隐藏 `node_modules`/`.git` 等),点击文件即时预览/编辑,支持保存写回与新建文件
+- 🖥️ **终端面板(常驻)** — 会话视图栏「终端」标签:工作区根目录下的命令执行器(PowerShell),快速运行命令并查看输出与退出码
+- 💰 **费用估算(常驻)** — 按 [DeepSeek 官方定价](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/) 实时估算本会话费用:真实 token 用量(输入/缓存命中/输出),自动适配 2026-08-17 峰谷定价(高峰 9:00-12:00、14:00-18:00 为基准价,空闲时段半价,8.17 前按旧价),同时给出 flash 与 pro 两档参考
+- 🎨 **品牌外观(常驻)** — 设置 → 通用 →「DEEPHARNESS 外观」:品牌深蓝顶栏/侧栏色、界面字体切换、渐变背景预设、字体导入(仓库 `fonts\` 目录或网页上传);选择保存在浏览器本地,重启后自动恢复
 - 💾 **数据 100% 本地** — 配置、会话、技能、沙箱全部保存在 `%USERPROFILE%\.dsh`
-- 📦 **便携分发** — 应用本体就在 `app/` 目录,克隆仓库即可获得完整应用
-- 🎨 **品牌化** — 自带多尺寸应用图标(`dsh.ico`,16–256px)与 README 横幅,图标生成脚本可复现
-- ⚖️ **MIT 开源** — 基于 MIT 协议,应用本体来自 DeepSeek 官方开源项目
+- 📦 **便携分发** — 应用本体在 `app/` 与 `desktop/`,克隆仓库 + 一条安装命令即可使用
+- ⚖️ **MIT 开源** — 应用本体来自 DeepSeek 官方开源项目,本项目为纯封装增强
 
 ## 🔧 工作原理
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ 双击桌面 "DEEPHARNESS" 快捷方式                                    │
+│   → electron.exe + desktop\main.js(原生窗口,无浏览器)            │
 └──────────────────────────────┬───────────────────────────────────┘
                                ▼
-              start-hidden.vbs(wscript,无窗口)
-                               ▼
-              DEEPHARNESS.ps1(隐藏 PowerShell)
+             单实例锁(重复双击 → 聚焦已有窗口)
                                ▼
          ┌───────────── 端口 3080 上已有 DSH 服务? ─────────────┐
          │ 是                                             │ 否  │
          ▼                                                ▼     │
-   直接复用现有服务                              后台启动服务          │
-   (不重复启动)                     node app\lib\bin.js web         │
-         │                               │ 等待就绪(≤90s)           │
-         └──────────────┬────────────────┘                         │
-                        ▼                                          │
-              打开浏览器 → http://127.0.0.1:3080                     │
-                        ▼                                          │
-                 DeepSeek Harness 工作台                             │
+   复用现有服务(不再启动)                        后台启动服务          │
+   探测:端口 + __DSH_BOOT__ + API        node app\lib\bin.js web   │
+   检查:工作区是否一致(不一致则警告)              │ 等待就绪(≤120s)     │
+         │                                                │        │
+         └──────────────────┬─────────────────────────────┘        │
+                            ▼                                      │
+              Electron 原生窗口 → http://127.0.0.1:3080              │
+                            ▼                                      │
+       DeepSeek Harness 工作台 + 常驻增强插件(文件/终端/外观/费用)      │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
 关键细节:
 
-- **端口探测** — 用 `TcpClient` 异步探测,再请求首页并检查 `__DSH_BOOT__` 标记,双重确认
-- **服务常驻** — 服务由 `Start-Process` 独立拉起,关闭浏览器/启动器不影响服务运行
-- **日志留痕** — 服务输出写入 `logs\server.log` 与 `logs\server.err.log`,启动失败时弹窗直接展示错误尾部
-- **幂等安全** — 无论双击多少次快捷方式,都只会得到一个服务实例和一次页面打开
+- **服务常驻** — 服务由启动器独立拉起,关闭应用窗口/浏览器不影响服务运行
+- **工作区一致性** — 服务始终以**仓库根目录**为工作区启动;若 3080 上运行的是别的工作区启动的服务(如手动 `npx dsh` 从其他目录启动),桌面应用会弹出警告,因为 DSH 的会话按工作区存放、此时看不到本仓库的会话与文件
+- **日志留痕** — 服务输出写入 `logs\server.log` 与 `logs\server.err.log`,桌面应用启动日志写入 `%USERPROFILE%\.dsh\app\boot.log`,启动失败时窗口内直接展示错误尾部
+- **幂等安全** — 无论双击多少次快捷方式,都只会得到一个服务实例和一个窗口
 
 ## 环境要求
 
@@ -68,7 +72,7 @@
 |---|---|
 | 操作系统 | Windows 10 / 11(x64) |
 | Node.js | 20 或更高版本(<https://nodejs.org>),已安装时启动器自动复用 |
-| 浏览器 | 任意现代浏览器(默认浏览器即可;Edge 可选,用于应用模式) |
+| 浏览器 | 仅"浏览器回退入口"需要;默认入口(Electron)无需浏览器 |
 
 ## 🚀 快速开始
 
@@ -81,62 +85,74 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 `install.ps1` 自动完成:
 
 1. **检查 Node.js**(缺失时打开官网引导安装)
-2. **安装应用依赖**(`npm install`,首次约 1–3 分钟;已装过则自动跳过)
-3. **创建桌面快捷方式** — `DEEPHARNESS`(默认浏览器)与 `DEEPHARNESS App`(Edge 应用模式,检测到 Edge 才创建)
+2. **安装应用依赖**(`app/` 的 npm install,首次约 1–3 分钟;已装过则自动跳过)
+3. **安装桌面壳依赖**(`desktop/` 的 Electron,首次需下载约 120MB,失败自动切换国内镜像重试)
+4. **安装常驻增强插件**(把 `plugins\deep-harness-appearance` 写入 web profile,**随服务启动自动加载**,无需每次授权)
+5. **创建桌面快捷方式**:
+   - `DEEPHARNESS` — **Electron 原生应用窗口**(主入口)
+   - `DEEPHARNESS(浏览器)` — 默认浏览器回退入口
 
-然后双击桌面 **DEEPHARNESS** 即可。首次双击会静默完成服务启动,稍等片刻页面自动打开。
+然后双击桌面 **DEEPHARNESS** 即可。首次双击会静默完成服务启动,稍等片刻原生窗口自动打开。
 
 ## 🖱️ 使用说明
 
 | 快捷方式 | 行为 | 适用场景 |
 |---|---|---|
-| `DEEPHARNESS` | 默认浏览器打开工作台 | 日常使用,多标签页协作 |
-| `DEEPHARNESS App` | Edge 应用模式独立窗口 | 想要"原生应用"体验,独立于浏览器标签 |
+| `DEEPHARNESS` | Electron 原生应用窗口(主入口) | 日常使用,真正的桌面 APP 体验 |
+| `DEEPHARNESS(浏览器)` | 默认浏览器打开工作台 | 需要浏览器多标签页协作时 |
 
 ### 自定义端口与工作目录
 
-服务默认端口 `3080`,工作目录默认为项目根目录。需要调整时:
-
 ```powershell
-# 用 8080 端口启动/打开
-powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Port 8080
+# 用 8080 端口启动/打开(需同时指定 Electron 窗口端口):
+powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Port 8080 -AppMode
 
-# 指定工作目录(Agent 的文件操作以此为根)
+# 指定工作目录(Agent 的文件操作以此为根;会话也按此目录存放):
 powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D:\my-workspace
 ```
 
-> 提示:自定义端口时,`DEEPHARNESS App`(Edge 应用模式)快捷方式固定指向 3080,如需同步请手动修改快捷方式参数。
+> 提示:自定义端口时,桌面快捷方式固定指向 3080;如需同步,请用上面的 PowerShell 命令启动。
 
 ### 常用路径
 
 | 路径 | 说明 |
 |---|---|
 | `%USERPROFILE%\.dsh` | 全部数据:配置、会话、技能、凭据 |
-| `%USERPROFILE%\.dsh\profiles\web` | Web 工作台配置文件 |
+| `%USERPROFILE%\.dsh\profiles\web` | Web 工作台配置文件(含常驻插件加载项) |
+| `%USERPROFILE%\.dsh\app` | 桌面壳状态:窗口位置、启动日志、冒烟证据 |
+| `%USERPROFILE%\.dsh\sessions` | 会话记录(按工作区目录分文件夹存放) |
 | `logs\server.log` / `logs\server.err.log` | 服务运行日志 / 错误日志 |
-| `fonts\` | 外观插件"导入字体"的字体文件目录 |
+| `fonts\` | 外观插件"导入字体"的字体文件目录(仓库侧) |
 
-## 🎨 工作台增强(可选动态插件)
+## 🎨 工作台增强(常驻插件,重启不丢)
 
-在会话中加载「DEEPHARNESS 外观与费用」动态插件(需在页面 Run 卡片授权)后:
+**DEEPHARNESS 外观与增强插件**(`plugins\deep-harness-appearance`)由 `install.ps1` 安装进 web profile,**随服务启动自动加载**——不再像旧版"动态插件"那样需要每次在 Run 卡片授权、服务重启后全部丢失:
 
-- **顶栏品牌色固定** — 最外层上边栏使用 DEEPHARNESS 品牌深蓝(`#16204A`),不再跟随浏览器主题(设置 → 外观可切换)
-- **字体风格** — 默认 / 微软雅黑 / 宋体 / 楷体 / 等宽 一键切换
-- **导入字体** — 将 `.ttf` / `.woff2` 等放入 `fonts\` 目录,在设置页一键导入
-- **渐变背景预设** — 暗夜蓝 / 极光紫 / 深林 / 纯色深蓝
-- **费用统计** — 统计栏下方新增一行,按 [DeepSeek 官方定价](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/) 估算本会话费用:
-  - 基于会话日志中的真实 token 用量(输入缓存命中 / 未命中 / 输出)
-  - **自动适配 2026-08-17 峰谷定价**:8.17 前按旧价;之后按北京时间高峰(9:00-12:00、14:00-18:00,价格翻倍)与空闲时段(半价)自动切换
+- **顶栏品牌色固定** — 最外层侧栏与标题行使用 DEEPHARNESS 品牌深蓝(`#16204A`),不再跟随浏览器主题(设置 → 通用可关闭)
+- **字体风格** — 默认 / 微软雅黑 / 宋体 / 楷体 / 等宽 一键切换,选择自动记忆
+- **导入字体** — 将 `.ttf` / `.woff2` 等放入 `fonts\` 目录,或在设置页直接上传(保存到 `%USERPROFILE%\.dsh\fonts`),一键应用
+- **渐变背景预设** — 暗夜蓝 / 极光紫 / 深林 / 纯色深蓝,选择自动记忆
+- **费用统计** — 「文件」「终端」标签页顶部实时显示本会话费用估算:
+  - 基于会话投影中的真实 token 用量(输入 / 缓存命中 / 输出)
+  - **自动适配 2026-08-17 峰谷定价**:8.17 前按旧价;之后按北京时间高峰(9:00-12:00、14:00-18:00,基准价)与空闲时段(半价)自动切换
   - 同时给出 flash 与 pro 两档参考价
-- **文件视图** — 会话视图栏新增「文件」标签:左侧工作区文件树(层级连线、自动隐藏 `node_modules`/`.git` 等),点击文件右侧即时预览与编辑,支持保存写回与新建文件
-- **终端面板** — 会话视图栏新增「终端」标签:工作区根目录下的命令执行器,快速运行命令并查看输出
+- **文件视图** — 会话视图栏「文件」标签:左侧工作区文件树(层级连线、自动隐藏 `node_modules`/`.git` 等),点击文件右侧即时预览与编辑,支持保存写回与新建文件
+- **终端面板** — 会话视图栏「终端」标签:工作区根目录下的命令执行器(PowerShell),快速运行命令并查看输出
 
-> 动态插件为进程级功能:服务重启后需重新加载插件;字体/背景选择在刷新页面后需重新设置。
+> 插件工作原理:host 半在 `webServer` 上注册 `/deepharness/api/*` 路由(文件树/读写、命令执行、字体托管),浏览器半通过 DSH 的 `dsh.client` 机制自动加载(会话视图栏标签 + 设置项)。文件路径做了工作区包含校验,越界请求一律拒绝。
+>
+> 手动安装/卸载(install.ps1 已自动完成):
+> ```powershell
+> node .\app\lib\bin.js plugin --profile web add .\plugins\deep-harness-appearance
+> node .\app\lib\bin.js plugin --profile web remove deep-harness-appearance
+> ```
 
-## 🔒 数据与隐私
+## 🔒 数据与持久化
 
 - **全部本地**:会话记录、技能、模型配置、沙箱文件均保存在 `%USERPROFILE%\.dsh`,不上传任何服务器
 - **仅本机访问**:服务默认绑定 `127.0.0.1`,不对局域网开放
+- **会话按工作区存放**:DSH 的会话记录存放在 `%USERPROFILE%\.dsh\sessions\<工作区路径>` 下。请**始终通过 DEEPHARNESS 快捷方式启动**(工作区 = 仓库根目录);若从其他目录手动运行 `npx dsh`,打开工作台会看不到本仓库的旧会话——**会话没有丢,只是换了工作区**,回到 DEEPHARNESS 启动即可恢复
+- **配置持久化**:模型配置(`settings.yaml`)、凭据(`.credentials.yaml`)、常驻插件(`profiles\web`)均在 `%USERPROFILE%\.dsh`,卸载/删除仓库均不影响
 - **删除即走**:删除仓库目录不影响数据;彻底清除需删除 `%USERPROFILE%\.dsh`
 
 ## 📁 项目结构
@@ -146,17 +162,24 @@ DEEPHARNESS/
 ├─ app/                        # DeepSeek Harness 应用本体(@deepseek-ai/dsh v0.1.0-rc.6)
 │  ├─ lib/                     # CLI 启动入口(bin.js 等)
 │  ├─ config/                  # 内置 Agent 预设与技能
-│  ├─ package.json             # 依赖清单(含 package-lock.json 锁定版本)
-│  └─ node_modules/            # 依赖(由 install.ps1 安装,不入库)
+│  └─ package.json             # 依赖清单(含 package-lock.json 锁定版本)
+├─ desktop/                    # Electron 桌面壳(真正的原生应用窗口)
+│  ├─ main.js                  # 主进程:单实例/探测/拉起服务/窗口状态/工作区检查
+│  ├─ preload.js               # 页面桥(__dshDesktop:设置/字体/外部链接/状态事件)
+│  └─ package.json             # Electron 依赖
+├─ plugins/
+│  └─ deep-harness-appearance/ # 常驻增强插件(文件视图/终端/外观/费用)
+│     ├─ lib/index.js          # host 半:/deepharness/api/* 路由
+│     ├─ lib/client.js         # 浏览器半:会话视图标签 + 设置项
+│     └─ test/                 # 契约测试(client-bundle.test.cjs)
 ├─ launcher/
-│  ├─ DEEPHARNESS.ps1          # 主启动器(端口探测 + 后台启动 + 打开界面)
+│  ├─ DEEPHARNESS.ps1          # 启动器(端口探测 + 后台启动 + 打开界面)
 │  ├─ start-hidden.vbs         # 无控制台窗口调用(wscript)
-│  └─ assets/
-│     └─ dsh.ico               # 应用图标(16–256px 多尺寸)
-├─ install.ps1                 # 一键安装:依赖 + 桌面快捷方式
-├─ uninstall.ps1               # 一键卸载:删除桌面快捷方式
+│  └─ assets/dsh.ico           # 应用图标(16–256px 多尺寸)
+├─ install.ps1                 # 一键安装:依赖 + 常驻插件 + 桌面快捷方式
+├─ uninstall.ps1               # 一键卸载:删除桌面快捷方式(-RemovePlugin 连插件)
 ├─ tools/
-│  ├─ make-icon.ps1            # 图标生成脚本(可复现,无需外部素材)
+│  ├─ make-icon.ps1            # 图标生成脚本(可复现)
 │  └─ logo.png                 # README 横幅
 ├─ README.md                   # 本文档
 ├─ LICENSE                     # MIT 协议
@@ -166,22 +189,26 @@ DEEPHARNESS/
 ## ❓ 常见问题
 
 **Q:双击快捷方式后没有反应?**
-A:启动器是静默的,首次启动需等待服务就绪(通常 5–20 秒)。若 90 秒内未打开页面,会弹出错误对话框并显示 `logs\server.err.log` 的错误尾部。
+A:启动是静默的,首次启动需等待服务就绪(通常 5–20 秒)。若超时,原生窗口会显示错误与 `logs\server.err.log` 的错误尾部;桌面壳自身的日志在 `%USERPROFILE%\.dsh\app\boot.log`。
 
-**Q:端口 3080 被占用?**
-A:启动器只会复用"确认是 DSH 的服务";若是其他程序占用,请用 `-Port` 参数换端口:
+**Q:提示"端口 3080 被占用/服务启动失败"?**
+A:启动器只会复用"确认是 DSH 的服务";若是其他程序(或从其他目录手动运行的 `npx dsh`)占用,请先关闭它,或换端口:
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Port 8080
+powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Port 8080 -AppMode
 ```
+
+**Q:打开后会话列表是空的,我之前的对话呢?**
+A:会话没有丢。DSH 的会话按"工作区(服务启动目录)"存放——如果 3080 上是**从别的目录**启动的服务(例如手动 `npx @deepseek-ai/dsh@latest web`),就看不到 D:\…\DEEPHARNESS 工作区里的会话。关闭那个服务,再通过 DEEPHARNESS 快捷方式启动即可;桌面应用检测到这种情况时会弹出警告。
+
+**Q:「文件」「终端」标签不见了?**
+A:它们由常驻插件提供。若安装时跳过了插件(或 profile 被重置),手动执行:
+```powershell
+node .\app\lib\bin.js plugin --profile web add .\plugins\deep-harness-appearance
+```
+然后重启服务。外观设置存在浏览器本地存储中,清除浏览器数据会重置外观。
 
 **Q:提示"未找到 Node.js"?**
 A:安装 Node.js 20+ 后重试:<https://nodejs.org>
-
-**Q:提示"尚未安装依赖"?**
-A:运行 `install.ps1` 完成 `npm install`,之后即可正常使用。
-
-**Q:如何修改默认端口?**
-A:编辑 `launcher\DEEPHARNESS.ps1` 顶部 `param([int]$Port = 3080)`,或改用 `install.ps1` 后手动更新 Edge 快捷方式参数。
 
 **Q:数据会丢吗?**
 A:数据在 `%USERPROFILE%\.dsh`,与仓库目录相互独立。卸载应用、删除仓库都不会动数据。
@@ -199,7 +226,8 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -Force   # 重新安装�
 ## 🗑️ 卸载
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
+powershell -ExecutionPolicy Bypass -File .\uninstall.ps1            # 删除桌面快捷方式
+powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemovePlugin  # 同时移除常驻插件
 ```
 
 删除桌面快捷方式后,删除仓库目录即完成卸载(数据保留在 `%USERPROFILE%\.dsh`)。
@@ -214,17 +242,17 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 
 ## English Overview
 
-**DEEPHARNESS** packages [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — DeepSeek's open-source AI agent workbench — as a Windows desktop app.
+**DEEPHARNESS** packages [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — DeepSeek's open-source AI agent workbench — as a **native Windows desktop app** (not a browser wrapper).
 
-- **One-click launch**: a desktop shortcut that probes the local port (3080 by default), boots the DSH server in the background if needed, and opens the workbench in your browser.
-- **Two modes**: open in your default browser, or use the bundled Edge app-mode shortcut for a standalone-window, native-app feel.
-- **100% local data**: everything lives in `%USERPROFILE%\.dsh`; the server binds to `127.0.0.1` only.
+- **Native window**: an Electron shell (desktop shortcut `DEEPHARNESS`) that probes the local port (3080 by default), boots the DSH server in the background if needed, and opens the workbench in a standalone app window with no address bar or browser chrome. A browser shortcut remains as a fallback.
+- **Persistent enhancement plugin**: the file-tree view, terminal panel, appearance (brand topbar / fonts / gradients) and per-session cost estimate ship as a profile plugin (`plugins/deep-harness-appearance`) that auto-loads with the service — no more re-authorizing after every restart.
+- **100% local data**: everything lives in `%USERPROFILE%\.dsh` (sessions are stored per workspace directory); the server binds to `127.0.0.1` only.
 - **Requirements**: Windows 10/11 + Node.js 20+.
 
 ```powershell
 git clone https://github.com/NANTI34/DEEPHARNESS.git
 cd DEEPHARNESS
-powershell -ExecutionPolicy Bypass -File .\install.ps1   # installs deps + desktop shortcut
+powershell -ExecutionPolicy Bypass -File .\install.ps1   # installs deps + plugin + desktop shortcuts
 ```
 
 Double-click the **DEEPHARNESS** shortcut on your desktop. Uninstall with `uninstall.ps1`. MIT licensed — see [LICENSE](LICENSE).
