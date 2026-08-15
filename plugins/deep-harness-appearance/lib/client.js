@@ -123,16 +123,25 @@ window.__ModuleLoader__.load({
       },
       editorCol: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "6px" },
       editor: {
-        position: "absolute", inset: 0, width: "100%", height: "100%", boxSizing: "border-box",
+        flex: 1, minHeight: 0, width: "100%", boxSizing: "border-box",
         padding: "8px 10px", fontSize: "12.5px", lineHeight: "1.5",
         fontFamily: "Consolas, 'Cascadia Code', monospace", resize: "none", outline: "none",
-        whiteSpace: "pre", overflow: "auto", tabSize: 2, border: "none", margin: 0
+        whiteSpace: "pre", overflow: "auto", tabSize: 2, border: "none", margin: 0,
+        // 固定暗底亮字:不依赖主题变量(浅色主题下 label-primary 解析为透明,
+        // 会导致输入文字看不见),保证任何主题都可读
+        background: "#0F172A", color: "#E2E8F0", caretColor: "#CBD5E1"
       },
       editorWrap: {
         flex: 1, minHeight: 0, position: "relative",
+        display: "flex", flexDirection: "column",
         background: "var(--dsw-alias-bg-layer-1)",
         border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px",
         overflow: "hidden"
+      },
+      editorToolbar: {
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "5px 8px", borderBottom: "1px solid var(--dsw-alias-border-l2)",
+        background: "var(--dsw-alias-bg-layer-2)", flex: "none"
       },
       terminal: {
         flex: 1, minHeight: 0, width: "100%", boxSizing: "border-box",
@@ -314,37 +323,42 @@ window.__ModuleLoader__.load({
       return parts.join("");
     }
 
-    // 高亮编辑器:pre 底层着色 + 透明文字 textarea 叠加(同步滚动)
+    // 文件编辑器:双模式。
+    // 编辑模式 = 普通 textarea(可靠、零错位、输入即时可见);
+    // 高亮预览 = 只读着色渲染(按文件类型)。默认进入编辑模式。
     function CodeEditor({ value, onChange, language, placeholder }) {
-      const taRef = React.useRef(null);
-      const preRef = React.useRef(null);
+      const [mode, setMode] = React.useState("edit");
       const html = React.useMemo(() => {
         if (value.length > HL_LIMIT) return escHtml(value);
         return highlightCode(value, language) || "";
       }, [value, language]);
-      const sync = () => {
-        const ta = taRef.current, pre = preRef.current;
-        if (ta && pre) { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; }
-      };
+      const langLabel = language || "纯文本";
       return React.createElement("div", { style: STYLES.editorWrap },
-        React.createElement("pre", {
-          ref: preRef,
-          "aria-hidden": true,
-          style: {
-            ...STYLES.editor, overflow: "hidden", color: "#D1D5DB", pointerEvents: "none",
-            background: "transparent", whiteSpace: "pre"
-          },
-          dangerouslySetInnerHTML: { __html: html + "\n" }
-        }),
-        React.createElement("textarea", {
-          ref: taRef,
-          value: value,
-          spellCheck: false,
-          placeholder: placeholder,
-          style: { ...STYLES.editor, background: "transparent", color: "transparent", caretColor: "#CBD5E1" },
-          onChange: (e) => onChange(e.target.value),
-          onScroll: sync
-        })
+        React.createElement("div", { style: STYLES.editorToolbar },
+          React.createElement("button", {
+            style: mode === "edit" ? STYLES.buttonPrimary : STYLES.button,
+            onClick: () => setMode("edit")
+          }, "编辑"),
+          React.createElement("button", {
+            style: mode === "preview" ? STYLES.buttonPrimary : STYLES.button,
+            onClick: () => setMode("preview")
+          }, "高亮预览"),
+          React.createElement("span", { style: { ...STYLES.hint, marginLeft: 8 } },
+            langLabel + (mode === "preview" && value.length > HL_LIMIT ? "(文件过大,未着色)" : ""))
+        ),
+        mode === "edit"
+          ? React.createElement("textarea", {
+            value: value,
+            spellCheck: false,
+            placeholder: placeholder,
+            wrap: "off",
+            style: STYLES.editor,
+            onChange: (e) => onChange(e.target.value)
+          })
+          : React.createElement("pre", {
+            style: { ...STYLES.editor, whiteSpace: "pre", color: "#D1D5DB" },
+            dangerouslySetInnerHTML: { __html: html + "\n" }
+          })
       );
     }
 

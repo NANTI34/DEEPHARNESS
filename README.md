@@ -259,6 +259,8 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemovePlugin  # 同时
 
 ---
 
+最后，我添加了一个极简模式V3,以期能重现美丽的灰测白月光。
+
 ## English Overview
 
 **DEEPHARNESS** packages [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — DeepSeek's open-source AI agent workbench — as a **native Windows desktop app** (not a browser wrapper).
