@@ -114,6 +114,22 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 | `%USERPROFILE%\.dsh` | 全部数据:配置、会话、技能、凭据 |
 | `%USERPROFILE%\.dsh\profiles\web` | Web 工作台配置文件 |
 | `logs\server.log` / `logs\server.err.log` | 服务运行日志 / 错误日志 |
+| `fonts\` | 外观插件"导入字体"的字体文件目录 |
+
+## 🎨 外观与费用(可选动态插件)
+
+在会话中加载「DEEPHARNESS 外观与费用」动态插件(需在页面 Run 卡片授权)后:
+
+- **顶栏品牌色固定** — 最外层上边栏使用 DEEPHARNESS 品牌深蓝(`#16204A`),不再跟随浏览器主题(设置 → 外观可切换)
+- **字体风格** — 默认 / 微软雅黑 / 宋体 / 楷体 / 等宽 一键切换
+- **导入字体** — 将 `.ttf` / `.woff2` 等放入 `fonts\` 目录,在设置页一键导入
+- **渐变背景预设** — 暗夜蓝 / 极光紫 / 深林 / 纯色深蓝
+- **费用统计** — 统计栏下方新增一行,按 [DeepSeek 官方定价](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/) 估算本会话费用:
+  - 基于会话日志中的真实 token 用量(输入缓存命中 / 未命中 / 输出)
+  - **自动适配 2026-08-17 峰谷定价**:8.17 前按旧价;之后按北京时间高峰(9:00-12:00、14:00-18:00,价格翻倍)与空闲时段(半价)自动切换
+  - 同时给出 flash 与 pro 两档参考价
+
+> 动态插件为进程级功能:服务重启后需重新加载插件;字体/背景选择在刷新页面后需重新设置。
 
 ## 🔒 数据与隐私
 
