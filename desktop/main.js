@@ -3,7 +3,7 @@
 //      窗口状态持久化(%USERPROFILE%\.dsh\app\window-state.json)
 //      设置持久化桥(%USERPROFILE%\.dsh\app\desktop-settings.json)
 // 用法:electron main.js [--port 3080] [--smoke] [--debug]
-const { app, BrowserWindow, ipcMain, shell, Menu, Tray, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, Menu, Tray, dialog, session } = require('electron')
 const { spawn, execFile } = require('child_process')
 const fs = require('fs')
 const path = require('path')
@@ -543,6 +543,9 @@ if (!gotLock) {
         bootLog('workspace mismatch:', mismatch)
         sendToRenderer('dsh:warn', mismatch)
       }
+      // 智能清缓存:仅当增强插件版本变化时清空页面缓存(保证加载新 bundle),
+      // 版本不变则不清——启动明显更快,壁纸/页面资源走缓存
+      await smartClearCache()
       status('服务已就绪,正在打开工作台…')
       bootLog('loading', URL_BASE + '/')
       win.loadURL(URL_BASE + '/')
@@ -582,6 +585,25 @@ if (!gotLock) {
       } catch { /* ignore */ }
       app.exit(0)
     }, 10000)
+  }
+
+  // 智能清缓存:插件版本变化时清空页面 HTTP 缓存,否则保留(提速)
+  async function smartClearCache() {
+    try {
+      const res = await httpProbe('/deepharness/api/status')
+      if (!res.ok || !res.body) return
+      let ver = ''
+      try { ver = String((JSON.parse(res.body).version) || '') } catch { /* ignore */ }
+      if (!ver) return
+      const last = readSettingsFile()['pluginVersion'] || ''
+      if (ver === last) return
+      await session.defaultSession.clearCache()
+      bootLog('plugin version changed (' + last + ' -> ' + ver + '), cache cleared')
+      const all = readSettingsFile()
+      all['pluginVersion'] = ver
+      fs.mkdirSync(APP_STATE_DIR, { recursive: true })
+      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(all, null, 2))
+    } catch { /* ignore */ }
   }
 
   async function armSmokeExit() {
@@ -680,12 +702,8 @@ if (!gotLock) {
   })
 
   app.whenReady().then(() => {
-    // 每次启动清空页面 HTTP 缓存:保证工作台页面与插件 bundle 永远加载最新版
-    // (服务端升级插件后,旧的 index.html/客户端脚本缓存会导致"看起来没更新")
-    try {
-      const { session } = require('electron')
-      session.defaultSession.clearCache().then(() => bootLog('http cache cleared')).catch(() => {})
-    } catch { /* ignore */ }
+    // 页面缓存由 smartClearCache 按插件版本变化智能清理(见 bootAndLoad),
+    // 平时启动保留缓存,打开工作台更快
     createWindow()
     createTray()
     bootAndLoad().catch(err => {

@@ -1,0 +1,2 @@
+name: 极简V3模式
+description: 极简模式的增强版：Windows 下用 pwsh 替代 bash，并追加 read/write/edit 与 glob/grep 常用文件工具，保留 str_replace_editor。
