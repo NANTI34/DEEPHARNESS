@@ -4,7 +4,7 @@
 
 ![logo](tools/logo.png)
 
-![MIT License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg) ![Node](https://img.shields.io/badge/node-%3E%3D20-339933.svg) ![Version](https://img.shields.io/badge/version-0.2.0-4D6BFE.svg)
+![MIT License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg) ![Node](https://img.shields.io/badge/node-%3E%3D20-339933.svg) ![Version](https://img.shields.io/badge/version-alpha1.6.0-4D6BFE.svg)
 
 ---
 
