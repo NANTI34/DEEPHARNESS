@@ -30,7 +30,10 @@
 - 📁 **文件视图(常驻)** — 会话视图栏「文件」标签:工作区文件树(自动隐藏 `node_modules`/`.git` 等),点击文件即时预览/编辑,支持保存写回与新建文件
 - 🖥️ **终端面板(常驻)** — 会话视图栏「终端」标签:工作区根目录下的命令执行器(PowerShell),快速运行命令并查看输出与退出码
 - 💰 **费用估算(常驻)** — 按 [DeepSeek 官方定价](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/) 实时估算本会话费用:真实 token 用量(输入/缓存命中/输出),自动适配 2026-08-17 峰谷定价(高峰 9:00-12:00、14:00-18:00 为基准价,空闲时段半价,8.17 前按旧价),同时给出 flash 与 pro 两档参考
-- 🎨 **品牌外观(常驻)** — 设置 → 通用 →「DEEPHARNESS 外观」:品牌深蓝顶栏/侧栏色、界面字体切换、渐变背景预设、字体导入(仓库 `fonts\` 目录或网页上传);选择保存在浏览器本地,重启后自动恢复
+- 📊 **统计/技能/环境(常驻)** — 会话视图栏另有「统计」(会话 token/耗时/费用明细)、「技能」(内置 Agent 预设与本地技能库浏览)、「环境」(插件版本/路径/诊断,一键复制)标签
+- 🌐 **内置轻量浏览器(常驻)** — 会话视图栏「浏览器」标签:搜索(百度/必应/Google)、打开网址、**调试本地纯前端应用**——输入本地 `index.html` 路径(或直接把文件拖进地址栏),经同源路由托管,ES module / fetch / Worker 均可运行;桌面端为独立 Chromium 内嵌窗口,**F12 打开独立开发者工具**,站点弹窗(target=_blank,如 B站视频卡片)自动就地打开,视频支持全屏
+- 🐟 **大肥鱼桌面伴侣** — DSH 状态驱动的桌面宠物(`plugins/dsh-dafeiyu`):实时显示思考/干活/等待/成功/出错状态卡,右键可调整大小/减少动态/隐藏/关闭;**点击状态卡右上角 ⋯ 打开聊天对话框**与鱼对话
+- 🎨 **品牌外观(常驻)** — 设置 →「DEEPHARNESS 外观」独立区块:品牌深蓝顶栏/侧栏色(可自定义主色)、界面字体切换(可导入字体)、渐变/图片背景预设、**金边装饰开关**(全界面金色描边光晕),选择保存在浏览器本地,重启后自动恢复
 - 💾 **数据 100% 本地** — 配置、会话、技能、沙箱全部保存在 `%USERPROFILE%\.dsh`
 - 📦 **便携分发** — 应用本体在 `app/` 与 `desktop/`,克隆仓库 + 一条安装命令即可使用
 - ⚖️ **MIT 开源** — 应用本体来自 DeepSeek 官方开源项目,本项目为纯封装增强
@@ -56,7 +59,8 @@
                             ▼                                      │
               Electron 原生窗口 → http://127.0.0.1:3080              │
                             ▼                                      │
-       DeepSeek Harness 工作台 + 常驻增强插件(文件/终端/外观/费用)      │
+       DeepSeek Harness 工作台 + 常驻增强插件(文件/终端/统计/技能/环境/浏览器/外观/费用)
+                            + 大肥鱼桌面伴侣(桌面宠物)      │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -151,19 +155,37 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 - **渐变背景预设** — 暗夜蓝 / 极光紫 / 深林 / 纯色深蓝,选择自动记忆
 - **图片背景 + 16:9 裁剪** — 设置页上传任意图片,弹出固定 16:9 比例裁剪框(拖动定位、缩放 0.05×–8× 可截超大画面或细节),确认后自动应用并保存到 `%USERPROFILE%\.dsh\backgrounds`;仓库自带 `assets\backgrounds\默认.jpg`(2560×1440)作为**出厂默认背景**;用户上传的背景可一键删除(出厂自带受保护)
 - **半透明玻璃视效** — 有背景(渐变或图片)时,侧边栏呈现**调亮的品牌蓝半透明**,聊天/轨迹等内容卡片同步半透明化,壁纸在侧边栏、聊天区、轨迹界面处处可见,不再有大片纯色遮挡
+- **金边装饰** — 设置页「装饰」开关:开启后全界面(侧边栏、面板、对话框、消息气泡、输入区、标签页、卡片等)披上金色描边与光晕,繁复华丽风格
 - **费用统计** — 「文件」「终端」标签页顶部实时显示本会话费用估算:
   - 基于会话投影中的真实 token 用量(输入 / 缓存命中 / 输出)
   - **自动适配 2026-08-17 峰谷定价**:8.17 前按旧价;之后按北京时间高峰(9:00-12:00、14:00-18:00,基准价)与空闲时段(半价)自动切换
   - 同时给出 flash 与 pro 两档参考价
 - **文件视图** — 会话视图栏「文件」标签:左侧工作区文件树(层级连线、自动隐藏 `node_modules`/`.git` 等),点击文件右侧即时预览与编辑,支持保存写回与新建文件;**代码按文件类型自动语法高亮**(JS/TS/Python/JSON/PowerShell/Java/C/C++/Go/Rust/SQL/YAML/HTML/CSS/Markdown 等,大文件自动降级保流畅)
 - **终端面板** — 会话视图栏「终端」标签:工作区根目录下的命令执行器(PowerShell),快速运行命令并查看输出,支持命令历史与清屏
+- **统计 / 技能 / 环境** — 「统计」按会话展示 token 用量、耗时与费用明细;「技能」浏览内置 Agent 预设与本地技能(SKILL.md);「环境」展示插件版本、工作区/数据目录、平台等诊断信息,一键复制
+- **内置浏览器** — 会话视图栏「浏览器」标签:
+  - 地址栏支持:搜索词(可切换 百度/必应/Google)、网址(自动补全 `https://`)、**本地 `index.html` 路径**(绝对路径如 `D:/demo/index.html` 或工作区相对路径,也可直接拖入文件)
+  - 本地纯前端应用经 `/deepharness/browser/serve/*` 同源路由托管(正确 MIME、目录自动找 index.html、支持 Range),**ES module / fetch / Worker 全部可用**——这是 file:// 打开所不具备的
+  - 桌面端使用独立 Chromium 内嵌窗口(`<webview>`),**F12(或工具栏「F12 调试」按钮)打开该页面独立的开发者工具**;浏览器回退模式为 iframe
+  - 站点弹窗(`target=_blank` / `window.open`,如 B站视频卡片)自动**就地打开**,不另开窗口;视频支持全屏
+- **大肥鱼桌面伴侣** — `plugins/dsh-dafeiyu`(随服务自动加载):
+  - 桌面最上层透明宠物,实时跟随 DSH 会话状态:休息/思考/干活/等你/完成/出错,头顶状态卡显示当前任务与进度
+  - 点击宠物有摸头/戳/尾巴互动,双击表白;右键菜单可调整大小(小/标准/大)、减少动态、本次隐藏、本次关闭
+  - **点击状态卡右上角 ⋯ 打开「大肥鱼 · 聊天」对话框**:气泡聊天、Enter 发送,鱼会按关键词回复并汇报当前状态/任务
+  - 设置页(设置 → 大肥鱼)可开关、调大小、活跃程度、减少动态、是否响应子 Agent
 
-> 插件工作原理:host 半在 `webServer` 上注册 `/deepharness/api/*` 路由(文件树/读写、命令执行、字体与背景图托管),浏览器半通过 DSH 的 `dsh.client` 机制自动加载(会话视图栏标签 + 设置项)。背景生效机制:背景承载在 `html/body`,同时用主题令牌把框架/侧栏变为半透明 + `backdrop-filter` 毛玻璃。文件路径做了工作区包含校验,越界请求一律拒绝。
+> 插件工作原理:host 半在 `webServer` 上注册 `/deepharness/api/*` 路由(文件树/读写、命令执行、字体与背景图托管、**浏览器本地文件同源托管 `/deepharness/browser/serve/*`**),浏览器半通过 DSH 的 `dsh.client` 机制自动加载(会话视图栏标签 + 设置项)。背景生效机制:背景承载在 `html/body`,同时用主题令牌把框架/侧栏变为半透明(不使用 `backdrop-filter`,避免创建包含块把全屏浮层困在侧边栏)。文件路径做了工作区包含校验,越界请求一律拒绝;浏览器托管允许绝对路径(本地调试工具)。
 >
 > 手动安装/卸载(install.ps1 已自动完成):
 > ```powershell
 > node .\app\lib\bin.js plugin --profile web add .\plugins\deep-harness-appearance
 > node .\app\lib\bin.js plugin --profile web remove deep-harness-appearance
+> ```
+>
+> 大肥鱼伴侣插件(`plugins\dsh-dafeiyu`,含桌面宠物程序 `runtime\bin\win32-x64\dsh-dafeiyu-helper.exe`,已随仓库分发)手动安装:
+> ```powershell
+> node .\app\lib\bin.js plugin --profile web add .\plugins\dsh-dafeiyu
+> node .\app\lib\bin.js plugin --profile web remove dsh-dafeiyu
 > ```
 
 ## 🔒 数据与持久化
@@ -187,10 +209,15 @@ DEEPHARNESS/
 │  ├─ preload.js               # 页面桥(__dshDesktop:设置/字体/外部链接/状态事件)
 │  └─ package.json             # Electron 依赖
 ├─ plugins/
-│  └─ deep-harness-appearance/ # 常驻增强插件(文件视图/终端/外观/费用)
-│     ├─ lib/index.js          # host 半:/deepharness/api/* 路由(含背景图托管)
-│     ├─ lib/client.js         # 浏览器半:会话视图标签 + 设置项 + 16:9 背景裁剪
-│     └─ test/                 # 契约测试(client-bundle.test.cjs)
+│  ├─ deep-harness-appearance/ # 常驻增强插件(文件/终端/统计/技能/环境/浏览器/外观/费用)
+│  │  ├─ lib/index.js          # host 半:/deepharness/api/* 路由(含背景图托管、浏览器文件托管)
+│  │  ├─ lib/client.js         # 浏览器半:会话视图标签 + 设置项 + 16:9 背景裁剪
+│  │  └─ test/                 # 契约测试(client-bundle.test.cjs)
+│  └─ dsh-dafeiyu/             # 大肥鱼桌面伴侣(宠物 + 聊天,内置 helper.exe)
+│     ├─ src/                  # host 半:helper 进程管理、会话状态桥接
+│     ├─ lib/client.js         # 设置页卡片(设置 → 大肥鱼)
+│     ├─ runtime/helper.py     # 宠物窗口源码(PySide6)
+│     └─ runtime/bin/win32-x64/dsh-dafeiyu-helper.exe  # 编译好的宠物程序
 ├─ assets/
 │  └─ backgrounds/默认.jpg     # 出厂默认背景(16:9 裁剪,2560×1440)
 ├─ launcher/
@@ -221,12 +248,15 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Port 8080 -
 **Q:打开后会话列表是空的,我之前的对话呢?**
 A:会话没有丢。DSH 的会话按"工作区(服务启动目录)"存放——如果 3080 上是**从别的目录**启动的服务(例如手动 `npx @deepseek-ai/dsh@latest web`),就看不到 D:\…\DEEPHARNESS 工作区里的会话。关闭那个服务,再通过 DEEPHARNESS 快捷方式启动即可;桌面应用检测到这种情况时会弹出警告。
 
-**Q:「文件」「终端」标签不见了?**
+**Q:「文件」「终端」等标签不见了?**
 A:它们由常驻插件提供。若安装时跳过了插件(或 profile 被重置),手动执行:
 ```powershell
 node .\app\lib\bin.js plugin --profile web add .\plugins\deep-harness-appearance
 ```
-然后重启服务。外观设置存在浏览器本地存储中,清除浏览器数据会重置外观。
+然后重启服务。外观设置存在浏览器本地存储中,清除浏览器数据会重置外观。大肥鱼不见了同理安装 `plugins\dsh-dafeiyu`。
+
+**Q:浏览器标签里点视频/链接没反应?**
+A:网站用 `target=_blank`/`window.open` 打开的链接(如 B站视频卡片)需要桌面壳的弹窗就地打开处理——请**完整重启应用**(托盘 → 退出并停止服务 → 重新打开),并确认「浏览器」标签使用的是桌面 webview 模式(重启后自动启用)。
 
 **Q:提示"未找到 Node.js"?**
 A:安装 Node.js 20+ 后重试:<https://nodejs.org>
@@ -268,7 +298,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemovePlugin  # 同时
 **DEEPHARNESS** packages [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — DeepSeek's open-source AI agent workbench — as a **native Windows desktop app** (not a browser wrapper).
 
 - **Native window**: an Electron shell (desktop shortcut `DEEPHARNESS`) that probes the local port (3080 by default), boots the DSH server in the background if needed, and opens the workbench in a standalone app window with no address bar or browser chrome. A browser shortcut remains as a fallback.
-- **Persistent enhancement plugin**: the file-tree view, terminal panel, appearance (brand topbar / fonts / gradients) and per-session cost estimate ship as a profile plugin (`plugins/deep-harness-appearance`) that auto-loads with the service — no more re-authorizing after every restart.
+- **Persistent enhancement plugin**: the file-tree view, terminal panel, stats/skills/env tabs, a built-in lightweight **browser tab** (search / open URLs / debug local `index.html` with ES modules and F12 DevTools), appearance (brand topbar / fonts / gradients / gold trim) and per-session cost estimate ship as a profile plugin (`plugins/deep-harness-appearance`) that auto-loads with the service — no more re-authorizing after every restart. A desktop pet **BigFish** (`plugins/dsh-dafeiyu`) shows live session status and comes with a chat dialog.
 - **100% local data**: everything lives in `%USERPROFILE%\.dsh` (sessions are stored per workspace directory); the server binds to `127.0.0.1` only.
 - **Requirements**: Windows 10/11 + Node.js 20+.
 
