@@ -1013,7 +1013,7 @@ window.__ModuleLoader__.load({
       );
     }
 
-    // ── 外观设置(设置 → 通用 → DEEPHARNESS 外观)───────────────────
+    // ── 外观设置(设置 → 界面外观)────────────────────────────────────
     // 会话视图栏标签清单(侧边卡片开关用)
     const VIEW_TABS = [
       { id: "browser", label: "浏览器" },
@@ -1771,12 +1771,12 @@ window.__ModuleLoader__.load({
         inject: (sessionId) => ({ sessionId })
       }, EnvView));
 
-      // 设置 → 独立区块「DEEPHARNESS 外观」(左侧导航 + 右侧全宽内容区)
+      // 设置 → 独立区块「界面外观」(左侧导航 + 右侧全宽内容区)
       ctx.slots.inject("settings.section", () => slots.register({
         name: "settings.section",
         id: "deepharness-appearance",
         order: 90,
-        label: () => "DEEPHARNESS 外观"
+        label: () => "界面外观"
       }, AppearanceSettings));
 
       // 设置 → 独立区块「感谢名单」(项目作者/调试助手/参考项目/大肥鱼提供者)
@@ -1791,6 +1791,15 @@ window.__ModuleLoader__.load({
       // 导致各设置页拥挤。这里放宽到视口允许的最大宽度。
       injectCSS("deep-harness-appearance-settings",
         '[class*="VOzbGW_panel"] { width: min(1120px, calc(100vw - 48px)) !important; }');
+
+      // 设置页左侧导航:核心只为 models/agent-presets/plugins 提供专属图标,
+      // 其余区块(含本插件三个)共用齿轮。给本插件三个区块配专属图案并隐藏重复齿轮。
+      // 导航按 order 排序,本插件区块(order 90/95/96)恒为最后三项。
+      injectCSS("deep-harness-appearance-nav",
+        '[class*="navCell"]:nth-last-child(1) > svg, [class*="navCell"]:nth-last-child(2) > svg, [class*="navCell"]:nth-last-child(3) > svg { display: none !important; }\n' +
+        '[class*="navCell"]:nth-last-child(3)::before { content: "🎨"; margin-right: 7px; font-size: 13px; line-height: 1; }\n' +
+        '[class*="navCell"]:nth-last-child(2)::before { content: "🛠️"; margin-right: 7px; font-size: 13px; line-height: 1; }\n' +
+        '[class*="navCell"]:nth-last-child(1)::before { content: "🙏"; margin-right: 7px; font-size: 13px; line-height: 1; }');
 
       // 启动即应用已保存的外观(品牌色/字体/背景),重启后自动恢复。
       // 主题覆盖层由插件主流程统一持有;设置组件只触发"重新应用",

@@ -1,4 +1,4 @@
-// DEEPHARNESS 工具插件 — client half(设置页「DEEPHARNESS 工具」独立区块)
+// DEEPHARNESS 工具插件 — client half(设置页「实用工具」独立区块)
 // 一键夺舍 / 人设编辑(soul.md) / 长期记忆 / 后端切换
 window.__ModuleLoader__.load({
   id: "deep-harness-tools",
@@ -283,7 +283,7 @@ window.__ModuleLoader__.load({
         name: "settings.section",
         id: "deepharness-tools",
         order: 95,
-        label: () => "DEEPHARNESS 工具"
+        label: () => "实用工具"
       }, (props) => React.createElement(ToolsSettings, { ...props, ctx })));
     }
 
