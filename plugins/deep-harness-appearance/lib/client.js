@@ -1031,7 +1031,6 @@ window.__ModuleLoader__.load({
       const [font, setFont] = React.useState(lsGet("deepharness.font", "default"));
       const [gold, setGold] = React.useState(lsGet("deepharness.gold", "off") === "on");
       const [skin, setSkin] = React.useState(lsGet("deepharness.skin", "none"));
-      const [tabTick, setTabTick] = React.useState(0);
       const [bg, setBg] = React.useState(resolveBackground());
       const [fonts, setFonts] = React.useState([]);
       const [backgrounds, setBackgrounds] = React.useState([]);
@@ -1061,7 +1060,7 @@ window.__ModuleLoader__.load({
       const setFontV = (v) => { lsSet("deepharness.font", v); setFont(v); reload(); };
       const setGoldV = (v) => { lsSet("deepharness.gold", v ? "on" : "off"); setGold(v); reload(); };
       const setSkinV = (v) => { lsSet("deepharness.skin", v); setSkin(v); reload(); };
-      const setTabV = (id, on) => { lsSet("deepharness.tab." + id, on ? "on" : "off"); setTabTick(x => x + 1); setMsg((on ? "已显示「" : "已隐藏「") + (VIEW_TABS.find(t => t.id === id) || {}).label + "」标签,刷新页面后生效"); };
+      const setTabV = (id, on) => { lsSet("deepharness.tab." + id, on ? "on" : "off"); setMsg((on ? "已显示「" : "已隐藏「") + (VIEW_TABS.find(t => t.id === id) || {}).label + "」标签,刷新页面后生效"); };
       const setBgV = (next) => { lsSet("deepharness.background", JSON.stringify(next)); setBg(next); reload(); };
 
       const applyFontFile = async (name) => {
@@ -1653,6 +1652,61 @@ window.__ModuleLoader__.load({
       );
     }
 
+    // ── 感谢名单(设置 → 感谢名单)───────────────────────────────────
+    // 纯静态信息页:项目作者、调试助手、官方基础、参考项目与大肥鱼提供者。
+    // 链接经 target=_blank 打开(桌面端由壳层转交系统浏览器)。
+    function CreditsView() {
+      const row = (title, items) => React.createElement("div", {
+        style: { display: "flex", flexDirection: "column", gap: 6 }
+      },
+        React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "var(--dsw-alias-label-primary)" } }, title),
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, items)
+      );
+      const entry = (name, desc, link) => React.createElement("div", {
+        key: name,
+        style: {
+          display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+          padding: "9px 12px", borderRadius: 8, fontSize: 13,
+          background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l2)"
+        }
+      },
+        React.createElement("span", { style: { fontWeight: 600, color: "var(--dsw-alias-label-primary)" } }, name),
+        React.createElement("span", { style: { flex: 1, minWidth: 160, color: "var(--dsw-alias-label-secondary)", fontSize: 12 } }, desc),
+        link && React.createElement("a", {
+          href: link, target: "_blank", rel: "noopener noreferrer",
+          style: { fontSize: 12, color: "#4D6BFE", textDecoration: "none", wordBreak: "break-all" }
+        }, "链接 ↗")
+      );
+      return React.createElement("div", { style: { ...STYLES.panel, gap: 12, maxWidth: 760 } },
+        React.createElement("div", { style: { fontSize: 12, color: "var(--dsw-alias-label-tertiary)" } },
+          "感谢每一位让 DEEPHARNESS 变得更好的人与项目。本项目基于 MIT 协议开源,参考项目版权归原作者所有。"),
+        row("🎩 项目作者",
+          entry("NANTI", "DEEPHARNESS 的创意提出者与全部需求/验收负责人,主导了每一次功能迭代与打磨。")),
+        row("🤖 调试与优化",
+          entry("DeepSeek AI 助手", "在 DeepSeek Harness 会话内完成代码实现、DEBUG 与兼容性优化,与 NANTI 一起逐项验收。")),
+        row("🏗️ 官方基础",
+          entry("@deepseek-ai/dsh(DeepSeek Harness)", "DeepSeek 官方开源的 Agent 运行时,本项目的底座(MIT)。",
+            "https://github.com/deepseek-ai/deepseek-harness")),
+        row("📚 参考项目(功能来源)",
+          entry("Deepseek-Harness-EAC(揽尽万象)", "zouyuxuan122 — 一键夺舍/长期记忆/皮肤预设/插件体系等思路参考(MIT)。",
+            "https://github.com/zouyuxuan122/Deepseek-Harness-EAC"),
+          entry("dsh_desktop", "myYangyunfan — 桌面封装与 M3 主题系统参考(GitHub 与 Gitee 双源)。",
+            "https://github.com/myYangyunfan/dsh_desktop"),
+          entry("dsh-better-sidebar", "omdsh-dev — 「侧边卡片」工作台与逐项开关概念参考。",
+            "https://github.com/omdsh-dev/DSH-better-sidebar"),
+          entry("dsh-easy-setup / dsh-soul-md / dsh-tdai-memory", "EAC 打包的社区插件 — 一键夺舍指令、soul.md 人设注入、长期记忆方案参考。",
+            "https://github.com/zouyuxuan122/Deepseek-Harness-EAC/tree/main/dsh-desktop/assets/plugins"),
+          entry("dsh-web-ui", "zhu1090093659 — 皮肤预设灵感来源(BSD-3-Clause);本项目皮肤为自研实现。",
+            "https://github.com/zhu1090093659/dsh-web-ui")),
+        row("🐟 大肥鱼桌面伴侣",
+          entry("dsh-dafeiyu", "QCYTSN — 状态驱动桌面宠物 + 聊天对话框(MIT)。",
+            "https://github.com/QCYTSN/dsh-dafeiyu")),
+        row("⚖️ 许可",
+          React.createElement("div", { style: { fontSize: 12, lineHeight: 1.7, color: "var(--dsw-alias-label-tertiary)" } },
+            "DEEPHARNESS 本体与增强插件为 MIT 协议;内置大肥鱼(dsh-dafeiyu)为 MIT;参考项目按其各自许可分发。皮肤为自研,不附带第三方皮肤资产。"))
+      );
+    }
+
     // ── 插件主体 ────────────────────────────────────────────────────
     const inject = ["slots", "theme"];
 
@@ -1724,6 +1778,14 @@ window.__ModuleLoader__.load({
         order: 90,
         label: () => "DEEPHARNESS 外观"
       }, AppearanceSettings));
+
+      // 设置 → 独立区块「感谢名单」(项目作者/调试助手/参考项目/大肥鱼提供者)
+      ctx.slots.inject("settings.section", () => slots.register({
+        name: "settings.section",
+        id: "deepharness-credits",
+        order: 96,
+        label: () => "感谢名单"
+      }, CreditsView));
 
       // 设置面板加宽:DSH 内核把面板固定为 800px,内容区仅约 580px,
       // 导致各设置页拥挤。这里放宽到视口允许的最大宽度。

@@ -99,10 +99,13 @@ for (const tab of viewTabs) {
   assert.strictEqual(props.sessionId, 'session-test-1')
 }
 const settingsSections = slotRegs.filter(r => r.name === 'settings.section')
-assert.strictEqual(settingsSections.length, 1, 'one settings.section expected')
-assert.strictEqual(settingsSections[0].reg.id, 'deepharness-appearance')
-assert.strictEqual(typeof settingsSections[0].reg.label, 'function')
-assert.ok(settingsSections[0].reg.label().length > 0, 'section nav label required')
+assert.strictEqual(settingsSections.length, 2, 'two settings.sections expected (appearance + credits)')
+const sectionIds = settingsSections.map(r => r.reg.id).sort()
+assert.deepStrictEqual(sectionIds, ['deepharness-appearance', 'deepharness-credits'], 'settings section ids must match')
+for (const sec of settingsSections) {
+  assert.strictEqual(typeof sec.reg.label, 'function')
+  assert.ok(sec.reg.label().length > 0, 'section nav label required')
+}
 
 // 1.3.0 升级清理:旧版遗留 gradient 键存在 → 强制回到出厂默认背景 默认.jpg
 const migrated = JSON.parse(storage.get('deepharness.background'))
