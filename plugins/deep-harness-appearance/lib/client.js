@@ -1608,6 +1608,24 @@ window.__ModuleLoader__.load({
         }
       };
 
+      // 访客页内守卫:把 target=_blank 链接改为同页跳转(就地打开,不弹新窗口)。
+      // 完全在页面内部处理,不依赖主进程/allowpopups,每次导航后重新注入。
+      const GUARD_SCRIPT = "(() => { " +
+        "if (window.__dshLinkGuard) return 'already'; " +
+        "window.__dshLinkGuard = true; " +
+        "document.addEventListener('click', (e) => { " +
+        "const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; " +
+        "if (a && a.target === '_blank' && /^https?:/.test(a.href)) { e.preventDefault(); e.stopPropagation(); location.href = a.href; } " +
+        "}, true); " +
+        "return 'guard-injected'; " +
+        "})()";
+      const injectGuard = () => {
+        const el = frameRef.current;
+        if (el && typeof el.executeJavaScript === "function") {
+          el.executeJavaScript(GUARD_SCRIPT).catch(() => { /* 跨源/受限页面忽略 */ });
+        }
+      };
+
       React.useEffect(() => {
         // 恢复上次浏览位置(优先取访客页当前 URL,其次地址栏输入)
         if (!current) {
@@ -1626,16 +1644,22 @@ window.__ModuleLoader__.load({
             try { setPageUrl(el.getURL() || ""); } catch { /* ignore */ }
             saveGuestUrl();
           };
+          const onNewWindow = (e) => {
+            // 兜底:即便主进程未拦截,也在渲染进程就地打开
+            try { e.preventDefault(); el.src = String(e.url); } catch { /* ignore */ }
+          };
           el.addEventListener("did-fail-load", onFail);
-          el.addEventListener("did-finish-load", onDone);
-          el.addEventListener("did-navigate", onNav);
-          el.addEventListener("did-navigate-in-page", onNav);
+          el.addEventListener("did-finish-load", () => { injectGuard(); onDone(); });
+          el.addEventListener("did-navigate", () => { injectGuard(); onNav(); });
+          el.addEventListener("did-navigate-in-page", () => { injectGuard(); onNav(); });
+          el.addEventListener("new-window", onNewWindow);
           return () => {
             saveGuestUrl(); // 切走标签页时记住当前位置,回来不丢
             el.removeEventListener("did-fail-load", onFail);
             el.removeEventListener("did-finish-load", onDone);
             el.removeEventListener("did-navigate", onNav);
             el.removeEventListener("did-navigate-in-page", onNav);
+            el.removeEventListener("new-window", onNewWindow);
           };
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
