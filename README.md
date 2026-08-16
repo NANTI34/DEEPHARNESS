@@ -309,6 +309,11 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemovePlugin  # 同时
 - 本项目基于 **MIT 协议**开源(见 [LICENSE](LICENSE))
 - 应用本体来自 DeepSeek 官方开源项目 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)(`@deepseek-ai/dsh` v0.1.0-rc.6,MIT)
 - 感谢 DeepSeek 团队开源如此出色的 Agent 运行时
+- 特别感谢两位参考项目作者(一键夺舍 / 长期记忆 / 一键换肤 / 侧边卡片等功能的思路来源):
+  - [zouyuxuan122 / Deepseek-Harness-EAC(揽尽万象)](https://github.com/zouyuxuan122/Deepseek-Harness-EAC)
+  - [myYangyunfan / dsh_desktop](https://github.com/myYangyunfan/dsh_desktop)([Gitee 镜像](https://gitee.com/my-yang-yunfan/dsh_desktop))
+- 感谢 [QCYTSN / dsh-dafeiyu](https://github.com/QCYTSN/dsh-dafeiyu) 贡献大肥鱼桌面伴侣(宠物 + 聊天,MIT)
+- 感谢 DeepSeek AI 助手在本项目中的代码实现、DEBUG 与兼容性优化;应用内设置 →「感谢名单」可查看完整名单
 
 ---
 
