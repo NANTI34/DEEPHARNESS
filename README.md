@@ -8,6 +8,11 @@
 
 ---
 
+## 📸 截图预览
+
+![DEEPHARNESS 界面预览](assets/screenshots/screenshot-overview.png)
+
+---
 
 ## 📖 这是什么?
 
@@ -328,7 +333,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemovePlugin  # 同时
 
 ---
 
-最后，我添加了一个极简模式V3,以期能重现美丽的灰测白月光。
+最后，我添加了新的极简模式,以期能重现美丽的灰测白月光。
 
 ## English Overview
 
