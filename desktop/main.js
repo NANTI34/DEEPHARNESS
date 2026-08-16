@@ -536,6 +536,18 @@ if (!gotLock) {
     })
     win.webContents.on('did-attach-webview', (_event, guest) => {
       bootLog('webview attached (browser tab)')
+      // 站点弹窗(target=_blank / window.open,如 B站视频卡片)一律改为在当前标签内打开,
+      // 否则无 allowpopups 时会被静默拦截,表现为"点击没反应"
+      guest.setWindowOpenHandler(({ url }) => {
+        if (/^https?:/.test(url)) {
+          bootLog('browser popup -> in-place:', url.slice(0, 140))
+          guest.loadURL(url)
+        }
+        return { action: 'deny' }
+      })
+      // 视频/播放器全屏:跟随窗口全屏
+      guest.on('enter-html-full-screen', () => { if (!win.isFullScreen()) win.setFullScreen(true) })
+      guest.on('leave-html-full-screen', () => { if (win.isFullScreen()) win.setFullScreen(false) })
       guest.on('before-input-event', (event, input) => {
         if (input.type === 'keyDown' && input.key === 'F12' && !input.isAutoRepeat) {
           event.preventDefault()

@@ -1535,6 +1535,7 @@ window.__ModuleLoader__.load({
         : useWebview
         ? React.createElement("webview", {
             ref: frameRef, src: current,
+            allowpopups: true, allowfullscreen: true,
             style: { flex: 1, minHeight: 0, borderRadius: 8, border: "1px solid var(--dsw-alias-border-l2)", background: "#FFFFFF" }
           })
         : React.createElement("iframe", {
