@@ -1624,9 +1624,17 @@ window.__ModuleLoader__.load({
         "})()";
       const injectGuard = () => {
         const el = frameRef.current;
-        if (el && typeof el.executeJavaScript === "function") {
-          el.executeJavaScript(GUARD_SCRIPT).catch(() => { /* 跨源/受限页面忽略 */ });
-        }
+        if (!el || typeof el.executeJavaScript !== "function") return;
+        try {
+          const p = el.executeJavaScript(GUARD_SCRIPT);
+          if (p && typeof p.catch === "function") p.catch(() => { /* 跨源/受限页面忽略 */ });
+        } catch { /* webview 未挂载,稍后由事件再注入 */ }
+      };
+      const guestUrl = () => {
+        try {
+          const el = frameRef.current;
+          return el && typeof el.getURL === "function" ? String(el.getURL() || "") : "";
+        } catch { return ""; }
       };
       const dshLog = (kind, detail) => {
         try {
@@ -1655,12 +1663,12 @@ window.__ModuleLoader__.load({
             dshLog("fail", e.errorCode + " " + (e.errorDescription || ""));
           }
         };
-        const onDone = () => { setFailMsg(""); dshLog("load", el.getURL ? el.getURL().slice(0, 120) : ""); };
+        const onDone = () => { setFailMsg(""); dshLog("load", guestUrl()); };
         const onNav = () => {
           setFailMsg("");
-          try { setPageUrl(el.getURL() || ""); } catch { /* ignore */ }
+          setPageUrl(guestUrl());
           saveGuestUrl();
-          dshLog("nav", el.getURL ? el.getURL().slice(0, 120) : "");
+          dshLog("nav", guestUrl());
         };
         const onNewWindow = (e) => {
           // 兜底:即便主进程未拦截,也在渲染进程就地打开
@@ -1673,7 +1681,7 @@ window.__ModuleLoader__.load({
         el.addEventListener("did-navigate-in-page", () => { injectGuard(); onNav(); });
         el.addEventListener("new-window", onNewWindow);
         injectGuard(); // webview 可能已加载,立即补一次
-        dshLog("attach", el.getURL ? el.getURL().slice(0, 120) : "");
+        dshLog("attach", guestUrl());
         return () => {
           saveGuestUrl(); // 切走标签页时记住当前位置,回来不丢
           el.removeEventListener("did-fail-load", onFail);
@@ -1691,11 +1699,11 @@ window.__ModuleLoader__.load({
         if (!current) return;
         const timer = setInterval(() => {
           const el = frameRef.current;
-          if (el && typeof el.executeJavaScript === "function") {
-            el.executeJavaScript("window.__dshClicks || 0")
-              .then((n) => setDiagClicks(Number(n) || 0))
-              .catch(() => { /* ignore */ });
-          }
+          if (!el || typeof el.executeJavaScript !== "function") return;
+          try {
+            const p = el.executeJavaScript("window.__dshClicks || 0");
+            if (p && typeof p.then === "function") p.then((n) => setDiagClicks(Number(n) || 0)).catch(() => { /* ignore */ });
+          } catch { /* webview 未挂载 */ }
         }, 2000);
         return () => clearInterval(timer);
       }, [current]);
