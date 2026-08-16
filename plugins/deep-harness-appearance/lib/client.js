@@ -878,22 +878,64 @@ window.__ModuleLoader__.load({
       // 一键换肤(预设 + 社区):内置皮肤为内联 CSS;社区皮肤经路由拉取 CSS 并设置 body 激活属性
       const savedSkinId = lsGet("deepharness.skin", "none");
       const skin = SKINS.find(s => s.id === savedSkinId) || COMMUNITY_SKINS.find(s => s.id === savedSkinId) || SKINS[0];
-      const applySkin = (skinEntry) => {
-        // 清除旧皮肤:移除所有 data-dsh-* body 属性 + 清空皮肤样式
+      // 卸载社区皮肤:先执行皮肤 effect 的 disposer(撤销装饰/标题/body 属性),再兜底清理
+      const SKIN_DISPOSERS = [];
+      const unapplyCommunitySkin = () => {
+        while (SKIN_DISPOSERS.length) {
+          const d = SKIN_DISPOSERS.pop();
+          try { if (typeof d === "function") d(); } catch { /* ignore */ }
+        }
         try {
           [...document.body.attributes].filter(a => a.name.startsWith("data-dsh-")).forEach(a => document.body.removeAttribute(a.name));
+          document.querySelectorAll("[data-skin-chrome]").forEach((el) => el.remove());
+          document.querySelectorAll('style[data-plugin-css*="skin"]').forEach((el) => el.remove());
+          try {
+            if (/QQ2008|初音|MINECRAFT|方块|女仆|XP|同花顺|交易|蓝色幻想|鲸|龙裔|DeepSeek 在线/.test(document.title)) document.title = "DeepSeek Harness";
+          } catch { /* ignore */ }
         } catch { /* ignore */ }
-        if (!skinEntry || skinEntry.id === "none") { injectCSS("deep-harness-appearance-skin", ""); return; }
+        window.__dshSkinLoaded = null;
+      };
+      const applySkin = (skinEntry) => {
+        if (!skinEntry || skinEntry.id === "none") { unapplyCommunitySkin(); injectCSS("deep-harness-appearance-skin", ""); return; }
         if (skinEntry.community) {
-          if (skinEntry.bodyAttr) { try { document.body.setAttribute(skinEntry.bodyAttr, ""); } catch { /* ignore */ } }
+          if (window.__dshSkinLoaded === skinEntry.id) return; // 已加载,避免重复
+          unapplyCommunitySkin();
           fetch(API + "/skin?name=" + encodeURIComponent(skinEntry.id), { cache: "no-store" })
             .then((r) => { if (!r.ok) throw new Error("skin fetch failed"); return r.text(); })
-            .then((css) => {
+            .then((code) => {
               if (lsGet("deepharness.skin", "none") !== skinEntry.id) return; // 已被切换
-              injectCSS("deep-harness-appearance-skin", css);
+              try {
+                // ① 执行 bundle,捕获其 __ModuleLoader__.load 注册(不污染真实加载器)
+                const realLoad = window.__ModuleLoader__ && window.__ModuleLoader__.load;
+                let handoff = null;
+                if (realLoad) window.__ModuleLoader__.load = (h) => { handoff = h; };
+                try {
+                  // eslint-disable-next-line no-new-func
+                  const fn = new Function(code);
+                  fn();
+                } finally {
+                  if (realLoad) window.__ModuleLoader__.load = realLoad;
+                }
+                if (!handoff || typeof handoff.factory !== "function") throw new Error("skin bundle did not register");
+                // ② 手动物化:factory(require) 注入 CSS 与组件定义;apply(fakeCtx) 安装装饰
+                const mod = handoff.factory(require);
+                const disposers = [];
+                const fakeCtx = {
+                  effect: (fn) => { const d = fn(); if (typeof d === "function") disposers.push(d); return d; },
+                  get: () => undefined
+                };
+                if (mod && typeof mod.apply === "function") mod.apply(fakeCtx);
+                SKIN_DISPOSERS.push(...disposers);
+                window.__dshSkinLoaded = skinEntry.id;
+                if (skinEntry.bodyAttr) { try { document.body.setAttribute(skinEntry.bodyAttr, ""); } catch { /* ignore */ } }
+              } catch (err) {
+                unapplyCommunitySkin();
+                try { window.location.reload(); } catch { /* ignore */ }
+              }
             })
             .catch(() => { /* 拉取失败保持无皮肤 */ });
         } else {
+          unapplyCommunitySkin();
           injectCSS("deep-harness-appearance-skin", skinEntry.css || "");
         }
       };

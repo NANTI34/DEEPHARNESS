@@ -488,11 +488,12 @@ export function apply(ctx) {
     const url = new URL(req.url, 'http://x')
     const name = String(url.searchParams.get('name') || '')
     if (!SKIN_IDS.includes(name)) throw new Error('unknown skin')
-    const file = path.join(skinsDir, name + '.css')
-    if (!existsSync(file)) throw new Error('skin css missing')
+    // 完整皮肤 bundle(dsh-web-ui / dsh-deep-whale 原样,含装饰组件与背景素材)
+    const file = path.join(skinsDir, 'bundles', name + '.js')
+    if (!existsSync(file)) throw new Error('skin bundle missing')
     const data = await fsp.readFile(file)
     res.writeHead(200, {
-      'content-type': 'text/css; charset=utf-8',
+      'content-type': 'application/javascript; charset=utf-8',
       'content-length': data.length,
       'cache-control': 'private, max-age=86400'
     })
