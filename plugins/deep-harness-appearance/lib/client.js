@@ -819,32 +819,39 @@ window.__ModuleLoader__.load({
         bgLayer = "url('" + API + "/background?name=" + encodeURIComponent(bg.name) + "') center/cover no-repeat fixed";
       }
 
-      const css = [];
-      // 一键换肤激活时,皮肤完全接管外观:停用壁纸/玻璃/品牌背景,避免互相覆盖
-      const skinActiveId = lsGet("deepharness.skin", "none");
-      const skinActive = skinActiveId !== "none" && (SKINS.some(s => s.id === skinActiveId) || COMMUNITY_SKINS.some(s => s.id === skinActiveId));
-      if (!skinActive) {
-        if (bgLayer) {
-          // 有背景:玻璃视效。品牌色开关真正生效——
-          // 勾选 = 品牌蓝玻璃;不勾选 = 中性深色玻璃(完全不用品牌色)
-          css.push("html, body { background: " + bgLayer + "; background-color: #0B1220; }");
-          if (brand) {
-            css.push(glassCss(brandColor));
-          } else {
-            css.push('[class*="sidebarCol"] { background: rgba(13,18,35,0.5) !important; }');
-            css.push('[class*="detailsCol"] { background: rgba(13,18,35,0.4) !important; }');
-            css.push('[class*="centerCol"] { background: rgba(8,12,25,0.28) !important; }');
+      // 背景渲染:一键换肤激活时皮肤完全接管外观(停用壁纸/玻璃/品牌背景)。
+      // 社区皮肤只有在「真正加载成功」(window.__dshSkinLoaded === 选中 id)后才视为激活,
+      // 否则保持壁纸——避免皮肤加载失败时页面纯黑。
+      const savedSkinIdForBg = lsGet("deepharness.skin", "none");
+      const isBuiltinSkin = savedSkinIdForBg !== "none" && SKINS.some(s => s.id === savedSkinIdForBg);
+      const isCommunitySkin = savedSkinIdForBg !== "none" && COMMUNITY_SKINS.some(s => s.id === savedSkinIdForBg);
+      const skinLoadedNow = () => isBuiltinSkin || (isCommunitySkin && window.__dshSkinLoaded === savedSkinIdForBg);
+      const renderBg = () => {
+        const css = [];
+        if (!skinLoadedNow()) {
+          if (bgLayer) {
+            // 有背景:玻璃视效。品牌色开关真正生效——
+            // 勾选 = 品牌蓝玻璃;不勾选 = 中性深色玻璃(完全不用品牌色)
+            css.push("html, body { background: " + bgLayer + "; background-color: #0B1220; }");
+            if (brand) {
+              css.push(glassCss(brandColor));
+            } else {
+              css.push('[class*="sidebarCol"] { background: rgba(13,18,35,0.5) !important; }');
+              css.push('[class*="detailsCol"] { background: rgba(13,18,35,0.4) !important; }');
+              css.push('[class*="centerCol"] { background: rgba(8,12,25,0.28) !important; }');
+            }
+          } else if (brand) {
+            css.push('[class*="sidebarCol"] { background: ' + sidebarColor + ' !important; }');
+            css.push('[class*="sidebarCol"] [class*="_brand"] { background: ' + brandColor + ' !important; }');
+            css.push("html, body { background-color: " + mixToward(brandColor, "#000000", 0.35) + "; }");
           }
-        } else if (brand) {
-          css.push('[class*="sidebarCol"] { background: ' + sidebarColor + ' !important; }');
-          css.push('[class*="sidebarCol"] [class*="_brand"] { background: ' + brandColor + ' !important; }');
-          css.push("html, body { background-color: " + mixToward(brandColor, "#000000", 0.35) + "; }");
+        } else {
+          // 皮肤已加载并接管:清掉 html/body 壁纸,避免白底/错底干扰皮肤
+          css.push("html, body { background: none !important; background-color: transparent !important; }");
         }
-      } else {
-        // 皮肤接管:清掉 html/body 壁纸,避免白底/错底干扰皮肤
-        css.push("html, body { background: none !important; background-color: transparent !important; }");
-      }
-      injectCSS("deep-harness-appearance-bg", css.join("\n"));
+        injectCSS("deep-harness-appearance-bg", css.join("\n"));
+      };
+      renderBg();
 
       // 金边装饰(可开关):金色渐变边框、光晕、繁复华丽风格
       const gold = lsGet("deepharness.gold", "off") === "on";
@@ -894,6 +901,7 @@ window.__ModuleLoader__.load({
           } catch { /* ignore */ }
         } catch { /* ignore */ }
         window.__dshSkinLoaded = null;
+        renderBg(); // 皮肤卸载后恢复壁纸/玻璃
       };
       const applySkin = (skinEntry) => {
         if (!skinEntry || skinEntry.id === "none") { unapplyCommunitySkin(); injectCSS("deep-harness-appearance-skin", ""); return; }
@@ -927,13 +935,14 @@ window.__ModuleLoader__.load({
                 if (mod && typeof mod.apply === "function") mod.apply(fakeCtx);
                 SKIN_DISPOSERS.push(...disposers);
                 window.__dshSkinLoaded = skinEntry.id;
+                renderBg(); // 皮肤真正加载成功后才停用壁纸
                 if (skinEntry.bodyAttr) { try { document.body.setAttribute(skinEntry.bodyAttr, ""); } catch { /* ignore */ } }
               } catch (err) {
                 unapplyCommunitySkin();
                 try { window.location.reload(); } catch { /* ignore */ }
               }
             })
-            .catch(() => { /* 拉取失败保持无皮肤 */ });
+            .catch(() => { /* 拉取失败:保持壁纸,不黑屏 */ });
         } else {
           unapplyCommunitySkin();
           injectCSS("deep-harness-appearance-skin", skinEntry.css || "");
