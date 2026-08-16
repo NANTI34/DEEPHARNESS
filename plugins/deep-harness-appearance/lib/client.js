@@ -681,14 +681,14 @@ window.__ModuleLoader__.load({
     // 开启皮肤时以皮肤为准,关闭即回默认。css 为空表示无皮肤。
     const SKINS = [
       { id: "none", label: "默认(无皮肤)", css: "" },
-      { id: "classic-xp", label: "经典 XP 蓝",
+      { id: "classic-xp", label: "经典蓝调",
         css: ':root{--dsw-alias-state-business-primary:#3B6FE0 !important;--dsw-alias-label-primary:#1F2D4D !important;--dsw-alias-label-secondary:#4A5A7A !important;--dsw-alias-label-tertiary:#7A86A0 !important;--dsw-alias-bg-layer-1:#F2F5FA !important;--dsw-alias-bg-layer-2:#E8EDF5 !important;--dsw-alias-bg-layer-3:#DEE5F0 !important;--dsw-alias-border-l2:#B9C6DC !important;--dsw-alias-state-success-primary:#1F8F3D !important;--dsw-alias-state-error-primary:#C03A2B !important;}\n' +
           '[class*="sidebarCol"]{background:linear-gradient(180deg,#2F63D8 0%,#2456C0 60%,#1D4AA8 100%) !important;}\n' +
           '[class*="sidebarCol"] [class*="_brand"]{background:rgba(255,255,255,0.12) !important;border-bottom:1px solid rgba(255,255,255,0.25) !important;}\n' +
           '[class*="centerCol"], [class*="detailsCol"]{background:#F7F9FC !important;}\n' +
           '[class*="panel"], [class*="card"], [class*="nodeItem"]{border-radius:6px !important;}\n' +
           '::selection{background:#3B6FE0 !important;color:#fff !important;}' },
-      { id: "miku", label: "初音绿黑",
+      { id: "mint-black", label: "薄荷绿黑",
         css: ':root{--dsw-alias-state-business-primary:#00C2B8 !important;--dsw-alias-label-primary:#E8FFFC !important;--dsw-alias-label-secondary:#9FD8D3 !important;--dsw-alias-label-tertiary:#6FA8A3 !important;--dsw-alias-bg-layer-1:#0E1B1A !important;--dsw-alias-bg-layer-2:#142624 !important;--dsw-alias-bg-layer-3:#1A302D !important;--dsw-alias-border-l2:#1F4B46 !important;--dsw-alias-state-success-primary:#00E5C3 !important;--dsw-alias-state-error-primary:#FF6EC7 !important;}\n' +
           '[class*="sidebarCol"]{background:linear-gradient(180deg,#062B27 0%,#0A3A34 55%,#0E4A42 100%) !important;}\n' +
           '[class*="sidebarCol"] [class*="_brand"]{background:rgba(0,194,184,0.16) !important;border-bottom:1px solid rgba(0,229,195,0.35) !important;}\n' +
@@ -820,21 +820,29 @@ window.__ModuleLoader__.load({
       }
 
       const css = [];
-      if (bgLayer) {
-        // 有背景:玻璃视效。品牌色开关真正生效——
-        // 勾选 = 品牌蓝玻璃;不勾选 = 中性深色玻璃(完全不用品牌色)
-        css.push("html, body { background: " + bgLayer + "; background-color: #0B1220; }");
-        if (brand) {
-          css.push(glassCss(brandColor));
-        } else {
-          css.push('[class*="sidebarCol"] { background: rgba(13,18,35,0.5) !important; }');
-          css.push('[class*="detailsCol"] { background: rgba(13,18,35,0.4) !important; }');
-          css.push('[class*="centerCol"] { background: rgba(8,12,25,0.28) !important; }');
+      // 一键换肤激活时,皮肤完全接管外观:停用壁纸/玻璃/品牌背景,避免互相覆盖
+      const skinActiveId = lsGet("deepharness.skin", "none");
+      const skinActive = skinActiveId !== "none" && (SKINS.some(s => s.id === skinActiveId) || COMMUNITY_SKINS.some(s => s.id === skinActiveId));
+      if (!skinActive) {
+        if (bgLayer) {
+          // 有背景:玻璃视效。品牌色开关真正生效——
+          // 勾选 = 品牌蓝玻璃;不勾选 = 中性深色玻璃(完全不用品牌色)
+          css.push("html, body { background: " + bgLayer + "; background-color: #0B1220; }");
+          if (brand) {
+            css.push(glassCss(brandColor));
+          } else {
+            css.push('[class*="sidebarCol"] { background: rgba(13,18,35,0.5) !important; }');
+            css.push('[class*="detailsCol"] { background: rgba(13,18,35,0.4) !important; }');
+            css.push('[class*="centerCol"] { background: rgba(8,12,25,0.28) !important; }');
+          }
+        } else if (brand) {
+          css.push('[class*="sidebarCol"] { background: ' + sidebarColor + ' !important; }');
+          css.push('[class*="sidebarCol"] [class*="_brand"] { background: ' + brandColor + ' !important; }');
+          css.push("html, body { background-color: " + mixToward(brandColor, "#000000", 0.35) + "; }");
         }
-      } else if (brand) {
-        css.push('[class*="sidebarCol"] { background: ' + sidebarColor + ' !important; }');
-        css.push('[class*="sidebarCol"] [class*="_brand"] { background: ' + brandColor + ' !important; }');
-        css.push("html, body { background-color: " + mixToward(brandColor, "#000000", 0.35) + "; }");
+      } else {
+        // 皮肤接管:清掉 html/body 壁纸,避免白底/错底干扰皮肤
+        css.push("html, body { background: none !important; background-color: transparent !important; }");
       }
       injectCSS("deep-harness-appearance-bg", css.join("\n"));
 

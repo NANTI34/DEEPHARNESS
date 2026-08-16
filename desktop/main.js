@@ -619,20 +619,30 @@ if (!gotLock) {
     }, 10000)
   }
 
-  // 智能清缓存:插件版本变化时清空页面 HTTP 缓存,否则保留(提速)
+  // 智能清缓存:插件版本或 client bundle 内容变化时清空页面 HTTP 缓存,否则保留(提速)。
+  // 版本号保持不变时(如外观插件固定 V1.6.0)client bundle 仍可能更新,
+  // 因此额外对比页面 HTML 里的 bundle rev(内容哈希),保证新功能/修复一定生效。
   async function smartClearCache() {
     try {
       const res = await httpProbe('/deepharness/api/status')
-      if (!res.ok || !res.body) return
       let ver = ''
-      try { ver = String((JSON.parse(res.body).version) || '') } catch { /* ignore */ }
-      if (!ver) return
-      const last = readSettingsFile()['pluginVersion'] || ''
-      if (ver === last) return
-      await session.defaultSession.clearCache()
-      bootLog('plugin version changed (' + last + ' -> ' + ver + '), cache cleared')
+      if (res.ok && res.body) { try { ver = String((JSON.parse(res.body).version) || '') } catch { /* ignore */ } }
+      let rev = ''
+      try {
+        const page = await httpProbe('/')
+        if (page.ok && page.body) {
+          const m = /deep-harness-appearance\/client\.js\?rev=([a-f0-9]+)/.exec(page.body)
+          if (m) rev = m[1]
+        }
+      } catch { /* ignore */ }
       const all = readSettingsFile()
+      const lastVer = all['pluginVersion'] || ''
+      const lastRev = all['bundleRev'] || ''
+      if (ver === lastVer && rev === lastRev) return
+      await session.defaultSession.clearCache()
+      bootLog('plugin changed (v ' + lastVer + ' -> ' + ver + ', rev ' + lastRev + ' -> ' + rev + '), cache cleared')
       all['pluginVersion'] = ver
+      all['bundleRev'] = rev
       fs.mkdirSync(APP_STATE_DIR, { recursive: true })
       fs.writeFileSync(SETTINGS_FILE, JSON.stringify(all, null, 2))
     } catch { /* ignore */ }
