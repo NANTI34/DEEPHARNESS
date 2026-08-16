@@ -1,6 +1,6 @@
 {
   "name": "deep-harness-appearance",
-  "version": "1.6.0",
+  "version": "1.7.1",
   "description": "DEEPHARNESS 常驻增强插件:品牌外观(可自定义品牌色/同系侧边栏色/字体/渐变与图片背景/半透明毛玻璃)、语法高亮文件视图、终端面板、会话费用估算",
   "type": "module",
   "main": "lib/index.js",

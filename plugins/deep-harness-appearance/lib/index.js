@@ -332,7 +332,7 @@ export function apply(ctx) {
     sendJson(res, 200, {
       ok: true,
       plugin: name,
-      version: '1.6.0',
+      version: '1.7.1',
       root,
       dshHome,
       fontsDirs,

@@ -4,7 +4,7 @@
 
 ![logo](tools/logo.png)
 
-![MIT License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg) ![Node](https://img.shields.io/badge/node-%3E%3D20-339933.svg) ![Version](https://img.shields.io/badge/version-alpha1.6.0-4D6BFE.svg)
+![MIT License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg) ![Node](https://img.shields.io/badge/node-%3E%3D20-339933.svg) ![Version](https://img.shields.io/badge/version-alpha1.7.1-4D6BFE.svg)
 
 ---
 
@@ -42,6 +42,8 @@
 - 💾 **数据 100% 本地** — 配置、会话、技能、沙箱全部保存在 `%USERPROFILE%\.dsh`
 - 📦 **便携分发** — 应用本体在 `app/` 与 `desktop/`,克隆仓库 + 一条安装命令即可使用
 - ⚖️ **MIT 开源** — 应用本体来自 DeepSeek 官方开源项目,本项目为纯封装增强
+- 🧪 **极简 V2 / V3 模式** — 内置极简模式系列:`minimal-v2`(动态极简:主/子 Agent 首轮仅暴露双工具 bash/pwsh + str_replace_editor,提示词固定为 "You are a helpful software engineer assistant.",首次工具调用后开放完整目录,压缩后重新锚定回极简态)与 `minimal-v3`(极简 V3)
+- 🛡️ **插件安装安全网(dsh-plugin-guard)** — 安装第三方插件前的自动快照、一键/自动回退、守护启动与事故报告(随仓库分发)
 
 ## 🔧 工作原理
 
@@ -98,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 1. **检查 Node.js**(缺失时打开官网引导安装)
 2. **安装应用依赖**(`app/` 的 npm install,首次约 1–3 分钟;已装过则自动跳过)
 3. **安装桌面壳依赖**(`desktop/` 的 Electron,首次需下载约 120MB,失败自动切换国内镜像重试)
-4. **安装常驻增强插件**(`plugins\deep-harness-appearance` + `plugins\deep-harness-tools` 写入 web profile,**随服务启动自动加载**,无需每次授权)
+4. **安装常驻增强插件**(`plugins\deep-harness-appearance` + `plugins\deep-harness-tools` + `plugins\dsh-plugin-guard` 写入 web profile,**随服务启动自动加载**,无需每次授权)
 5. **创建桌面快捷方式**:
    - `DEEPHARNESS` — **Electron 原生应用窗口**(主入口)
    - `DEEPHARNESS(浏览器)` — 默认浏览器回退入口
@@ -234,10 +236,14 @@ DEEPHARNESS/
 │  │  ├─ lib/client.js         # 浏览器半:会话视图标签 + 设置项 + 16:9 背景裁剪
 │  │  ├─ skins/                # 社区皮肤 CSS(dsh-web-ui BSD-3-Clause + 女仆工坊 CC BY-NC-SA)
 │  │  └─ test/                 # 契约测试(client-bundle.test.cjs)
-│  ├─ deep-harness-tools/      # 工具插件(一键夺舍/人设 soul.md/长期记忆/后端切换)
+│  ├─ deep-harness-tools/      # 工具插件(一键夺舍/人设 soul.md/长期记忆/后端切换/插件市场)
 │  │  ├─ lib/index.js          # host 半:systemPrompt 区块 + 记忆捕获 + /deepharness/tools/* 路由
-│  │  ├─ lib/client.js         # 浏览器半:设置 →「DEEPHARNESS 工具」区块
+│  │  ├─ lib/client.js         # 浏览器半:设置 →「实用工具」区块
 │  │  └─ test/                 # 契约测试(client-bundle.test.cjs)
+│  ├─ dsh-plugin-guard/        # 插件安装安全网(快照/回退/守护启动/事故报告,来自 lxzy-7)
+│  │  ├─ src/                  # host 半:快照引擎/事故分析/守护启动
+│  │  ├─ lib/client.js         # 浏览器半(立即加载)
+│  │  └─ scripts/              # boot-guard / rollback / smoke-test 脚本
 │  └─ dsh-dafeiyu/             # 大肥鱼桌面伴侣(宠物 + 聊天,内置 helper.exe)
 │     ├─ src/                  # host 半:helper 进程管理、会话状态桥接
 │     ├─ lib/client.js         # 设置页卡片(设置 → 大肥鱼)
