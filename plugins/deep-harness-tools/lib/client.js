@@ -26,8 +26,7 @@ window.__ModuleLoader__.load({
       return data;
     }
 
-    const STYLES = {
-      section: { display: "flex", flexDirection: "column", gap: 8, padding: "14px 16px", borderRadius: 12, border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)" },
+    const STYLES = {      section: { display: "flex", flexDirection: "column", gap: 8, padding: "14px 16px", borderRadius: 12, border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)" },
       sectionTitle: { fontSize: 14, fontWeight: 700, color: "var(--dsw-alias-label-primary)" },
       row: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" },
       label: { fontSize: 13, fontWeight: 600, color: "var(--dsw-alias-label-secondary)", minWidth: 96 },
@@ -39,6 +38,23 @@ window.__ModuleLoader__.load({
       ok: { fontSize: 12, color: "var(--dsw-alias-state-success-primary, #22C55E)" },
       err: { fontSize: 12, color: "var(--dsw-alias-state-error-primary, #F87171)" }
     };
+
+    // ── 插件市场(精选,离线清单;安装命令复制后自行执行)────────────────
+    const MARKET_PLUGINS = [
+      { id: "better-sidebar", name: "dsh-better-sidebar", desc: "侧边栏工作台:文件/编辑器/内嵌浏览器/真实终端/Git 面板(omdsh-dev)", install: "dsh-better-sidebar" },
+      { id: "tdai-memory", name: "dsh-tdai-memory", desc: "长期记忆:腾讯云 Agent Memory 移植(L0 捕获→L1 结构化→自动召回注入)", install: "dsh-tdai-memory" },
+      { id: "soul-md", name: "dsh-soul-md", desc: "soul.md 人设热重载:markdown 人设注入系统提示词,改动即生效", install: "dsh-soul-md" },
+      { id: "tool-vision", name: "dsh-tool-vision", desc: "外置视觉模型:任意 OpenAI 兼容 VLM(识图/OCR/读图表)", install: "dsh-tool-vision" },
+      { id: "webui-market", name: "dsh-webui-market", desc: "在线插件市场:浏览 awesome-dsh-plugin.com 并一键安装(需联网)", install: "dsh-webui-market" },
+      { id: "easy-setup", name: "dsh-easy-setup", desc: "快速配置:视觉模型选择/soul.md 编辑/一键迁移(夺舍)", install: "dsh-easy-setup" },
+      { id: "skin-switch", name: "dsh-skin-switch", desc: "皮肤切换器(EAC 配套:互斥切换 + 恢复默认)", install: "dsh-skin-switch" },
+      { id: "balance", name: "dsh-balance", desc: "DeepSeek 余额小部件:对话底部实时显示本轮费用与余额", install: "dsh-balance" },
+      { id: "terminal", name: "dsh-terminal", desc: "会话内持久终端:SSE 流式、断线重连(EAC 配套)", install: "dsh-terminal" },
+      { id: "file-changes", name: "dsh-file-changes", desc: "文件更改追踪 + 一键还原:行级 diff(EAC 配套)", install: "dsh-file-changes" },
+      { id: "deep-flow", name: "@jkxie/dsh-deep-flow", desc: "深度思考流式展示:思考过程可视化", install: "@jkxie/dsh-deep-flow" },
+      { id: "tui", name: "dsh-TUI", desc: "Claude Code 风格全屏交互终端:工作状态行/滚动回滚/上下文进度条", install: "dsh-TUI" },
+      { id: "mobile-fix", name: "dsh-web-mobile-fix", desc: "移动端布局修复(≤400px 窄屏适配,纯 CSS)", install: "dsh-web-mobile-fix" }
+    ];
 
     function ToolsSettings({ ctx }) {
       const [status, setStatus] = React.useState(null);
@@ -269,6 +285,26 @@ window.__ModuleLoader__.load({
           ),
           React.createElement("div", { style: STYLES.hint },
             "第三方(opencode-go 等)需已安装对应 provider 预设(如 v4-flash-godmode-opencode-go),否则新会话会提示无可用模型。")
+        ),
+
+        // ── 插件市场(精选) ──
+        React.createElement("div", { style: STYLES.section },
+          React.createElement("span", { style: STYLES.sectionTitle }, "插件市场(精选)"),
+          React.createElement("div", { style: STYLES.hint },
+            "社区常用 DSH 插件精选(参考 Deepseek-Harness-EAC 插件体系)。点「复制命令」后在工作区根目录运行即可安装,装完重启服务生效;卸载把 add 换成 remove。"),
+          React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" } },
+            MARKET_PLUGINS.map((p) => React.createElement("div", {
+              key: p.id,
+              style: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "8px 10px", borderRadius: 8, fontSize: 12, background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l2)" }
+            },
+              React.createElement("span", { style: { fontWeight: 600, color: "var(--dsw-alias-label-primary)", minWidth: 150 } }, p.name),
+              React.createElement("span", { style: { flex: 1, minWidth: 200, color: "var(--dsw-alias-label-secondary)" } }, p.desc),
+              React.createElement("button", {
+                style: STYLES.button,
+                onClick: () => copyText("node app\\lib\\bin.js plugin --profile web " + (p.remove ? "remove " : "add ") + p.install, "安装命令已复制,粘贴到仓库根目录运行")
+              }, p.remove ? "复制卸载命令" : "复制安装命令")
+            ))
+          )
         ),
 
         msg && React.createElement("div", { style: msg.indexOf("失败") >= 0 ? STYLES.err : STYLES.ok }, msg)

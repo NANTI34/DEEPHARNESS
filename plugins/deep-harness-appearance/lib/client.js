@@ -713,7 +713,33 @@ window.__ModuleLoader__.load({
           '[class*="centerCol"], [class*="detailsCol"]{background:#080D18 !important;}\n' +
           '[class*="panel"]{box-shadow:0 0 24px rgba(34,211,238,0.12) !important;}\n' +
           '::selection{background:#22D3EE !important;color:#031018 !important;}' }
-    ];;
+    ];
+
+    // ── 社区皮肤(dsh-web-ui / dsh-deep-whale,经 /deepharness/api/skin 加载 CSS)──
+    // bodyAttr = 皮肤 CSS 的激活选择器;community 皮肤 css 为空,由 applySkin 异步拉取。
+    const COMMUNITY_SKINS = [
+      { id: "qq98", label: "QQ2008 怀旧", bodyAttr: "data-dsh-retro", community: true, css: "" },
+      { id: "blue-fantasy", label: "蓝色幻想", bodyAttr: "data-dsh-blue-fantasy", community: true, css: "" },
+      { id: "whale-song", label: "鲸吟", bodyAttr: "data-dsh-whale-song", community: true, css: "" },
+      { id: "minecraft", label: "MINECRAFT 方块世界", bodyAttr: "data-dsh-minecraft", community: true, css: "" },
+      { id: "maid-atelier", label: "深海女仆工坊", bodyAttr: "data-dsh-maid-atelier", community: true, css: "" },
+      { id: "xp", label: "Windows XP", bodyAttr: "data-dsh-xp", community: true, css: "" },
+      { id: "ths", label: "同花顺", bodyAttr: "data-dsh-ths", community: true, css: "" },
+      { id: "trading", label: "交易风格", bodyAttr: "data-dsh-trading", community: true, css: "" },
+      { id: "miku", label: "初音未来(社区)", bodyAttr: "data-dsh-miku", community: true, css: "" },
+      { id: "dragon-heir", label: "龙裔", bodyAttr: "data-dsh-dragon-heir", community: true, css: "" }
+    ];
+    // 社区皮肤元信息(名称/作者/许可),设置页加载后填充
+    let communitySkinMeta = [];
+    try {
+      fetch(API + "/skins", { headers: { accept: "application/json" } })
+        .then((r) => r.json())
+        .then((d) => { communitySkinMeta = (d && d.skins) || []; })
+        .catch(() => { /* 插件未就绪时静默 */ });
+    } catch { /* ignore */ }
+    function communityMeta(id) {
+      return communitySkinMeta.find((s) => s.id === id);
+    };
     const BRAND_COLOR = "#16204A";
     const DEFAULT_BG_NAME = "默认.jpg";
 
@@ -841,9 +867,29 @@ window.__ModuleLoader__.load({
         injectCSS("deep-harness-appearance-gold", "");
       }
 
-      // 一键换肤(预设):皮肤覆盖主题令牌 + 结构样式,与品牌色/金边/背景独立
-      const skin = SKINS.find(s => s.id === lsGet("deepharness.skin", "none")) || SKINS[0];
-      injectCSS("deep-harness-appearance-skin", skin ? skin.css : "");
+      // 一键换肤(预设 + 社区):内置皮肤为内联 CSS;社区皮肤经路由拉取 CSS 并设置 body 激活属性
+      const savedSkinId = lsGet("deepharness.skin", "none");
+      const skin = SKINS.find(s => s.id === savedSkinId) || COMMUNITY_SKINS.find(s => s.id === savedSkinId) || SKINS[0];
+      const applySkin = (skinEntry) => {
+        // 清除旧皮肤:移除所有 data-dsh-* body 属性 + 清空皮肤样式
+        try {
+          [...document.body.attributes].filter(a => a.name.startsWith("data-dsh-")).forEach(a => document.body.removeAttribute(a.name));
+        } catch { /* ignore */ }
+        if (!skinEntry || skinEntry.id === "none") { injectCSS("deep-harness-appearance-skin", ""); return; }
+        if (skinEntry.community) {
+          if (skinEntry.bodyAttr) { try { document.body.setAttribute(skinEntry.bodyAttr, ""); } catch { /* ignore */ } }
+          fetch(API + "/skin?name=" + encodeURIComponent(skinEntry.id), { cache: "no-store" })
+            .then((r) => { if (!r.ok) throw new Error("skin fetch failed"); return r.text(); })
+            .then((css) => {
+              if (lsGet("deepharness.skin", "none") !== skinEntry.id) return; // 已被切换
+              injectCSS("deep-harness-appearance-skin", css);
+            })
+            .catch(() => { /* 拉取失败保持无皮肤 */ });
+        } else {
+          injectCSS("deep-harness-appearance-skin", skinEntry.css || "");
+        }
+      };
+      applySkin(skin);
 
       if (theme) {
         const tokens = {};
@@ -1167,6 +1213,8 @@ window.__ModuleLoader__.load({
 
         React.createElement("div", { style: STYLES.section },
           React.createElement("span", { style: STYLES.sectionTitle }, "一键换肤(预设)"),
+          React.createElement("div", { style: STYLES.hint },
+            "内置 5 款自研皮肤 + " + COMMUNITY_SKINS.length + " 款社区开源皮肤(dsh-web-ui / dsh-deep-whale)。点击即切换,与品牌色、金边、背景互相独立;「深海女仆工坊」为 CC BY-NC-SA 4.0(禁止商用),其余社区皮肤为 BSD-3-Clause。"),
           React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
             SKINS.filter(s => s.id !== "none").map(s => React.createElement("button", {
               key: s.id,
@@ -1174,13 +1222,22 @@ window.__ModuleLoader__.load({
               title: "一键应用皮肤: " + s.label,
               onClick: () => setSkinV(s.id)
             }, s.label)),
+            COMMUNITY_SKINS.map(s => {
+              const meta = communityMeta(s.id);
+              return React.createElement("button", {
+                key: s.id,
+                style: skin === s.id ? STYLES.buttonPrimary : STYLES.button,
+                title: (meta ? meta.tagline + " · " : "") + (meta ? meta.author + " · " : "") + s.label + (s.id === "maid-atelier" ? "(非商用)" : ""),
+                onClick: () => setSkinV(s.id)
+              }, s.label + (s.id === "maid-atelier" ? "(非商用)" : ""));
+            }),
             skin !== "none" && React.createElement("button", {
               style: { ...STYLES.button, borderColor: "#B45309", color: "#B45309" },
               onClick: () => setSkinV("none")
             }, "恢复默认")
           ),
           React.createElement("div", { style: STYLES.hint },
-            "皮肤一键切换,覆盖界面主色与面板风格(经典 XP 蓝 / 初音绿黑 / 樱花粉 / 深空紫 / 赛博霓虹);与品牌色、金边、背景互相独立,开启皮肤时以皮肤为准,关闭即回默认。")
+            "社区皮肤版权归原作者所有(来源: dsh-web-ui / Deepseek-Harness-EAC),随插件附许可文本;切换后若样式未刷新,重开设置或刷新页面即可。")
         ),
 
         React.createElement("div", { style: STYLES.section },
@@ -1531,23 +1588,46 @@ window.__ModuleLoader__.load({
       const [current, setCurrent] = React.useState("");
       const [engine, setEngine] = React.useState(lsGet("deepharness.browser.engine", "baidu"));
       const [status, setStatus] = React.useState("");
+      const [pageUrl, setPageUrl] = React.useState("");
+      const [failMsg, setFailMsg] = React.useState("");
       const [recent, setRecent] = React.useState(JSON.parse(lsGet("deepharness.browser.recent", "[]")));
       const frameRef = React.useRef(null);
 
+      const saveGuestUrl = () => {
+        const el = frameRef.current;
+        if (el && typeof el.getURL === "function") {
+          try { lsSet("deepharness.browser.guestUrl", el.getURL()); } catch { /* ignore */ }
+        }
+      };
+
       React.useEffect(() => {
+        // 恢复上次浏览位置(优先取访客页当前 URL,其次地址栏输入)
         if (!current) {
-          const saved = lsGet("deepharness.browser.url", "");
+          const guest = lsGet("deepharness.browser.guestUrl", "");
+          const saved = guest || lsGet("deepharness.browser.url", "");
           if (saved) navigate(saved);
         }
         const el = frameRef.current;
         if (el && el.tagName === "WEBVIEW") {
-          const onFail = (e) => setStatus("加载失败: " + (e.errorDescription || e.validationMessage || "未知错误"));
-          const onDone = () => setStatus("");
+          const onFail = (e) => {
+            if (e.isMainFrame) setFailMsg((e.errorDescription || e.validationMessage || "未知错误") + "(" + (e.errorCode || "?") + ")");
+          };
+          const onDone = () => { setFailMsg(""); };
+          const onNav = () => {
+            setFailMsg("");
+            try { setPageUrl(el.getURL() || ""); } catch { /* ignore */ }
+            saveGuestUrl();
+          };
           el.addEventListener("did-fail-load", onFail);
           el.addEventListener("did-finish-load", onDone);
+          el.addEventListener("did-navigate", onNav);
+          el.addEventListener("did-navigate-in-page", onNav);
           return () => {
+            saveGuestUrl(); // 切走标签页时记住当前位置,回来不丢
             el.removeEventListener("did-fail-load", onFail);
             el.removeEventListener("did-finish-load", onDone);
+            el.removeEventListener("did-navigate", onNav);
+            el.removeEventListener("did-navigate-in-page", onNav);
           };
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1562,7 +1642,28 @@ window.__ModuleLoader__.load({
         lsSet("deepharness.browser.recent", JSON.stringify(next));
         setRecent(next);
         setCurrent(r.url);
+        setFailMsg("");
         setStatus(r.type === "search" ? "正在搜索: " + raw : r.type === "file" ? "本地文件: " + raw : "已打开: " + r.url);
+      };
+
+      const goBack = () => {
+        const el = frameRef.current;
+        if (!el) return;
+        if (typeof el.goBack === "function") { try { if (el.canGoBack()) el.goBack(); } catch { /* ignore */ } }
+        else { try { el.contentWindow.history.back(); } catch { /* ignore */ } }
+      };
+      const goForward = () => {
+        const el = frameRef.current;
+        if (!el) return;
+        if (typeof el.goForward === "function") { try { if (el.canGoForward()) el.goForward(); } catch { /* ignore */ } }
+        else { try { el.contentWindow.history.forward(); } catch { /* ignore */ } }
+      };
+      const reloadFrame = () => {
+        const el = frameRef.current;
+        if (!el) return;
+        if (typeof el.reload === "function") el.reload();
+        else { try { el.src = el.src; } catch { /* ignore */ } }
+        setFailMsg("");
       };
 
       const openDevTools = () => {
@@ -1582,15 +1683,23 @@ window.__ModuleLoader__.load({
         else setStatus("当前环境无法读取拖入文件路径,请手动输入路径");
       };
 
+      const btnStyle = {
+        padding: "5px 10px", borderRadius: 6, border: "1px solid var(--dsw-alias-border-l2)",
+        background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)",
+        fontSize: 12, cursor: "pointer", lineHeight: 1.4, flex: "none"
+      };
+
       const toolbar = React.createElement("div", {
         style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" },
         onDragOver: (e) => e.preventDefault(),
         onDrop: dropFile
       },
+        React.createElement("button", { style: btnStyle, title: "后退", onClick: goBack }, "←"),
+        React.createElement("button", { style: btnStyle, title: "前进", onClick: goForward }, "→"),
         React.createElement("select", {
           value: engine,
           onChange: (e) => { const v = e.target.value; setEngine(v); lsSet("deepharness.browser.engine", v); },
-          style: { padding: "5px 6px", borderRadius: 6, border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)", fontSize: 12, outline: "none" },
+          style: { padding: "5px 6px", borderRadius: 6, border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)", fontSize: 12, outline: "none", flex: "none" },
           title: "搜索方式"
         },
           Object.keys(BROWSER_ENGINES).map((k) =>
@@ -1600,9 +1709,9 @@ window.__ModuleLoader__.load({
           value: input,
           onChange: (e) => setInput(e.target.value),
           onKeyDown: (e) => { if (e.key === "Enter") navigate(input); },
-          placeholder: "搜索词 / 网址 / 本地 index.html(如 D:/demo/index.html 或 web-app/dist/index.html,可拖入文件)",
+          placeholder: "搜索词 / 网址 / 本地 index.html(如 D:/demo/index.html,可拖入文件)",
           style: {
-            flex: 1, minWidth: 180, padding: "6px 10px", borderRadius: 6,
+            flex: 1, minWidth: 160, padding: "5px 10px", borderRadius: 6,
             border: "1px solid var(--dsw-alias-border-l2)",
             background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)",
             fontSize: 12, outline: "none"
@@ -1610,28 +1719,20 @@ window.__ModuleLoader__.load({
         }),
         React.createElement("datalist", { id: "dsh-browser-recent" },
           recent.map((r, i) => React.createElement("option", { key: i, value: r }))),
-        React.createElement("button", { style: STYLES.button, onClick: () => navigate(input) }, "前往"),
-        React.createElement("button", {
-          style: STYLES.button,
-          onClick: () => {
-            const el = frameRef.current;
-            if (!el) return;
-            if (typeof el.reload === "function") el.reload();
-            else el.src = el.src;
-          }
-        }, "刷新"),
-        React.createElement("button", { style: STYLES.button, onClick: openDevTools }, "F12 调试")
+        React.createElement("button", { style: { ...btnStyle, borderColor: "#4D6BFE", color: "#4D6BFE" }, onClick: () => navigate(input) }, "前往"),
+        React.createElement("button", { style: btnStyle, title: "刷新", onClick: reloadFrame }, "刷新"),
+        React.createElement("button", { style: btnStyle, title: "打开开发者工具", onClick: openDevTools }, "F12")
       );
 
       const frame = current === ""
         ? React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 } },
             React.createElement("div", { style: { textAlign: "center", color: "var(--dsw-alias-label-tertiary)", fontSize: 13, lineHeight: 2.1, maxWidth: 560 } },
               React.createElement("div", { style: { fontSize: 42, lineHeight: 1.4 } }, "🌐"),
-              React.createElement("div", null, "内置轻量浏览器:搜索、打开网址、调试本地纯前端应用"),
+              React.createElement("div", null, "内置轻量浏览器(镶嵌在工作台会话视图内):搜索、打开网址、调试本地纯前端应用"),
               React.createElement("div", null, "输入本地 index.html 路径(如 D:/demo/index.html)即可运行,支持 ES module / fetch"),
               React.createElement("div", null, useWebview
-                ? "桌面端:内嵌 Chromium 窗口,按 F12 或点「F12 调试」打开独立开发者工具"
-                : "浏览器模式:按 F12 后在开发者工具顶栏帧列表选择本 iframe 进行调试")))
+                ? "桌面端:内嵌 Chromium 窗口,F12 打开独立开发者工具;切换标签页后返回不丢页面"
+                : "浏览器模式:按浏览器 F12 后在帧列表选择本 iframe 调试")))
         : useWebview
         ? React.createElement("webview", {
             ref: frameRef, src: current,
@@ -1645,9 +1746,14 @@ window.__ModuleLoader__.load({
 
       return React.createElement("div", { style: { ...STYLES.panel, gap: 6 } },
         toolbar,
-        status && React.createElement("div", {
+        (status || pageUrl) && React.createElement("div", {
           style: { fontSize: 11.5, color: "var(--dsw-alias-label-tertiary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: "none" }
-        }, status),
+        }, pageUrl ? (status ? status + " · " : "") + pageUrl : status),
+        failMsg && React.createElement("div", {
+          style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, fontSize: 12, background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.4)", color: "#F87171", flex: "none" }
+        },
+          React.createElement("span", { style: { flex: 1 } }, "加载失败: " + failMsg),
+          React.createElement("button", { style: btnStyle, onClick: reloadFrame }, "重试")),
         frame
       );
     }
@@ -1696,14 +1802,16 @@ window.__ModuleLoader__.load({
             "https://github.com/omdsh-dev/DSH-better-sidebar"),
           entry("dsh-easy-setup / dsh-soul-md / dsh-tdai-memory", "EAC 打包的社区插件 — 一键夺舍指令、soul.md 人设注入、长期记忆方案参考。",
             "https://github.com/zouyuxuan122/Deepseek-Harness-EAC/tree/main/dsh-desktop/assets/plugins"),
-          entry("dsh-web-ui", "zhu1090093659 — 皮肤预设灵感来源(BSD-3-Clause);本项目皮肤为自研实现。",
-            "https://github.com/zhu1090093659/dsh-web-ui")),
+          entry("dsh-web-ui", "zhu1090093659 — 本项目内置的 10 款社区皮肤来源(BSD-3-Clause)。",
+            "https://github.com/zhu1090093659/dsh-web-ui"),
+          entry("dsh-deep-whale(深海女仆工坊)", "Small-tailqwq — 内置皮肤「深海女仆工坊」(CC BY-NC-SA 4.0,禁止商用)。",
+            "https://github.com/Small-tailqwq/dsh-deep-whale")),
         row("🐟 大肥鱼桌面伴侣",
           entry("dsh-dafeiyu", "QCYTSN — 状态驱动桌面宠物 + 聊天对话框(MIT)。",
             "https://github.com/QCYTSN/dsh-dafeiyu")),
         row("⚖️ 许可",
           React.createElement("div", { style: { fontSize: 12, lineHeight: 1.7, color: "var(--dsw-alias-label-tertiary)" } },
-            "DEEPHARNESS 本体与增强插件为 MIT 协议;内置大肥鱼(dsh-dafeiyu)为 MIT;参考项目按其各自许可分发。皮肤为自研,不附带第三方皮肤资产。"))
+            "DEEPHARNESS 本体与增强插件为 MIT 协议;内置大肥鱼(dsh-dafeiyu)为 MIT;内置皮肤来自 dsh-web-ui(BSD-3-Clause)与 dsh-deep-whale(CC BY-NC-SA 4.0 禁止商用),版权归原作者所有,随插件附许可文本;其余参考项目按其各自许可分发。"))
       );
     }
 

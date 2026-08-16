@@ -12,6 +12,7 @@
   },
   "files": [
     "lib",
+    "skins",
     "cordis.patch.yml"
   ],
   "dsh": {

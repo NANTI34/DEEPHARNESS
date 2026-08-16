@@ -8,6 +8,7 @@ import { execFile } from 'node:child_process'
 import { promises as fsp, existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
+import { fileURLToPath } from 'node:url'
 
 export const name = 'deep-harness-appearance'
 
@@ -466,6 +467,36 @@ export function apply(ctx) {
     if (data.length === 0) throw new Error('empty font data')
     await fsp.writeFile(path.join(dir, name), data)
     sendJson(res, 200, { ok: true, name, bytes: data.length })
+  })
+
+  // ── 社区皮肤(dsh-web-ui / dsh-deep-whale,随插件分发)────────────────
+  const skinsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skins')
+  const SKIN_IDS = ['qq98', 'blue-fantasy', 'whale-song', 'minecraft', 'maid-atelier', 'xp', 'ths', 'trading', 'miku', 'dragon-heir']
+
+  route('GET', API_PREFIX + '/skins', async (_req, res) => {
+    const out = []
+    for (const id of SKIN_IDS) {
+      try {
+        const meta = JSON.parse(readFileSync(path.join(skinsDir, id + '.json'), 'utf8'))
+        out.push({ id: meta.id, name: meta.name, tagline: meta.tagline, author: meta.author, license: meta.license, bodyAttr: meta.bodyAttr })
+      } catch { /* skip missing */ }
+    }
+    sendJson(res, 200, { ok: true, skins: out })
+  })
+
+  route('GET', API_PREFIX + '/skin', async (req, res) => {
+    const url = new URL(req.url, 'http://x')
+    const name = String(url.searchParams.get('name') || '')
+    if (!SKIN_IDS.includes(name)) throw new Error('unknown skin')
+    const file = path.join(skinsDir, name + '.css')
+    if (!existsSync(file)) throw new Error('skin css missing')
+    const data = await fsp.readFile(file)
+    res.writeHead(200, {
+      'content-type': 'text/css; charset=utf-8',
+      'content-length': data.length,
+      'cache-control': 'private, max-age=86400'
+    })
+    res.end(data)
   })
 
   route('GET', API_PREFIX + '/backgrounds', async (_req, res) => {

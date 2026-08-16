@@ -33,7 +33,7 @@
 - 📊 **统计/技能/环境(常驻)** — 会话视图栏另有「统计」(会话 token/耗时/费用明细)、「技能」(内置 Agent 预设与本地技能库浏览)、「环境」(插件版本/路径/诊断,一键复制)标签
 - 🌐 **内置轻量浏览器(常驻)** — 会话视图栏「浏览器」标签:搜索(百度/必应/Google)、打开网址、**调试本地纯前端应用**——输入本地 `index.html` 路径(或直接把文件拖进地址栏),经同源路由托管,ES module / fetch / Worker 均可运行;桌面端为独立 Chromium 内嵌窗口,**F12 打开独立开发者工具**,站点弹窗(target=_blank,如 B站视频卡片)自动就地打开,视频支持全屏
 - 🐟 **大肥鱼桌面伴侣** — DSH 状态驱动的桌面宠物(`plugins/dsh-dafeiyu`):实时显示思考/干活/等待/成功/出错状态卡,右键可调整大小/减少动态/隐藏/关闭;**点击状态卡右上角 ⋯ 打开聊天对话框**与鱼对话
-- 🎨 **品牌外观(常驻)** — 设置 →「DEEPHARNESS 外观」独立区块:品牌深蓝顶栏/侧栏色(可自定义主色)、界面字体切换(可导入字体)、渐变/图片背景预设、**金边装饰开关**(全界面金色描边光晕)、**一键换肤(5 款预设皮肤:经典 XP 蓝/初音绿黑/樱花粉/深空紫/赛博霓虹,互斥切换可恢复默认)**、**侧边卡片开关**(会话视图栏标签逐项显示/隐藏),选择保存在浏览器本地,重启后自动恢复
+- 🎨 **品牌外观(常驻)** — 设置 →「界面外观」独立区块:品牌深蓝顶栏/侧栏色(可自定义主色)、界面字体切换(可导入字体)、渐变/图片背景预设、**金边装饰开关**(全界面金色描边光晕)、**一键换肤(5 款自研预设 + 10 款社区开源皮肤:QQ2008 怀旧/蓝色幻想/鲸吟/方块世界/深海女仆工坊(非商用)/XP/同花顺/交易终端/初音未来/龙裔,互斥切换可恢复默认)**、**侧边卡片开关**(会话视图栏标签逐项显示/隐藏),选择保存在浏览器本地,重启后自动恢复
 - 🛠️ **DEEPHARNESS 工具(常驻)** — 设置 →「DEEPHARNESS 工具」独立区块:
   - **一键夺舍** — 选择 Codex / Claude Code 目录一键迁移:自动注册为工作区、新建会话并发送迁移指令,AI 把技能(skills)、MCP 服务器、长期记忆(CLAUDE.md / AGENTS.md)全部搬进 DSH(也可仅复制指令)
   - **自定义提示词(soul.md)** — markdown 人设卡注入系统提示词,保存后约 300ms 热重载,无需重启
@@ -161,7 +161,7 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 - **图片背景 + 16:9 裁剪** — 设置页上传任意图片,弹出固定 16:9 比例裁剪框(拖动定位、缩放 0.05×–8× 可截超大画面或细节),确认后自动应用并保存到 `%USERPROFILE%\.dsh\backgrounds`;仓库自带 `assets\backgrounds\默认.jpg`(2560×1440)作为**出厂默认背景**;用户上传的背景可一键删除(出厂自带受保护)
 - **半透明玻璃视效** — 有背景(渐变或图片)时,侧边栏呈现**调亮的品牌蓝半透明**,聊天/轨迹等内容卡片同步半透明化,壁纸在侧边栏、聊天区、轨迹界面处处可见,不再有大片纯色遮挡
 - **金边装饰** — 设置页「装饰」开关:开启后全界面(侧边栏、面板、对话框、消息气泡、输入区、标签页、卡片等)披上金色描边与光晕,繁复华丽风格
-- **一键换肤(预设皮肤)** — 设置页「一键换肤」:5 款预设一键互斥切换(经典 XP 蓝 / 初音绿黑 / 樱花粉 / 深空紫 / 赛博霓虹),覆盖界面主色与面板风格,与品牌色/金边/背景互相独立,可随时恢复默认
+- **一键换肤(预设 + 社区皮肤)** — 设置页「一键换肤」:5 款自研预设(经典 XP 蓝 / 初音绿黑 / 樱花粉 / 深空紫 / 赛博霓虹)+ **10 款社区开源皮肤**(dsh-web-ui 系列 BSD-3-Clause:QQ2008 怀旧 / 蓝色幻想 / 鲸吟 / MINECRAFT 方块世界 / Windows XP / 同花顺 / 交易终端 / 初音未来 / 龙裔;dsh-deep-whale 的「深海女仆工坊」CC BY-NC-SA 4.0 禁止商用),一键互斥切换、可恢复默认;皮肤 CSS 随插件分发(经 `/deepharness/api/skin` 托管),许可文本随附
 - **侧边卡片(标签开关)** — 设置页「侧边卡片」:会话视图栏的「浏览器/文件/终端/统计/技能/环境」标签逐项显示/隐藏(默认全开,修改后刷新页面生效)
 - **费用统计** — 「文件」「终端」标签页顶部实时显示本会话费用估算:
   - 基于会话投影中的真实 token 用量(输入 / 缓存命中 / 输出)
@@ -173,6 +173,7 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 - **内置浏览器** — 会话视图栏「浏览器」标签:
   - 地址栏支持:搜索词(可切换 百度/必应/Google)、网址(自动补全 `https://`)、**本地 `index.html` 路径**(绝对路径如 `D:/demo/index.html` 或工作区相对路径,也可直接拖入文件)
   - 本地纯前端应用经 `/deepharness/browser/serve/*` 同源路由托管(正确 MIME、目录自动找 index.html、支持 Range),**ES module / fetch / Worker 全部可用**——这是 file:// 打开所不具备的
+  - 工具栏:后退/前进/刷新/前往/F12;状态栏实时显示当前页面 URL;**切走标签页再回来不丢页面**(记住访客页当前位置);加载失败显示错误条 + 重试
   - 桌面端使用独立 Chromium 内嵌窗口(`<webview>`),**F12(或工具栏「F12 调试」按钮)打开该页面独立的开发者工具**;浏览器回退模式为 iframe
   - 站点弹窗(`target=_blank` / `window.open`,如 B站视频卡片)自动**就地打开**,不另开窗口;视频支持全屏
 - **大肥鱼桌面伴侣** — `plugins/dsh-dafeiyu`(随服务自动加载):
@@ -189,6 +190,7 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 - **自定义提示词(soul.md 人设)** — 默认 `%USERPROFILE%\.dsh\soul.md`(可换路径),markdown 人设卡注册为 `soul:persona` 系统提示词区块;文件被监听,保存后约 300ms 热重载,无需重启;设置页内直接编辑
 - **长期记忆** — 监听会话事件自动捕获每轮「用户提问 → 助手最终答复」,追加写入 `%USERPROFILE%\.dsh\memory\memories.jsonl`(上限 2000 条自动滚动);注册 `memory:recall` 提示词区块(函数文本,每次组装时重读),把最近 N 条(0–10,默认 5)注入新提示词,实现跨会话长期记忆;设置页支持关键词搜索与一键清空
 - **后端切换** — 读取/改写 `%USERPROFILE%\.dsh\settings.yaml` 的 `agent-default-model`(provider / model / reasoningEffort),预设:官方 v4 Pro、官方 v4 Flash、opencode-go v4 Flash(第三方,需已装对应 provider 预设)、自定义;写入前自动备份 `settings.yaml.bak`,只对新会话生效
+- **插件市场(精选)** — 离线精选清单(better-sidebar / tdai-memory / soul-md / tool-vision / webui-market / easy-setup / balance / terminal / file-changes / deep-flow / TUI / mobile-fix),一键复制安装/卸载命令,装完重启服务生效
 - 数据与配置:`deepharness-tools.json`(开关/路径/条数)、`memory\memories.jsonl`(记忆库),均在 `%USERPROFILE%\.dsh` 下
 
 > 插件工作原理:host 半在 `webServer` 上注册 `/deepharness/api/*` 路由(文件树/读写、命令执行、字体与背景图托管、**浏览器本地文件同源托管 `/deepharness/browser/serve/*`**),浏览器半通过 DSH 的 `dsh.client` 机制自动加载(会话视图栏标签 + 设置项)。背景生效机制:背景承载在 `html/body`,同时用主题令牌把框架/侧栏变为半透明(不使用 `backdrop-filter`,避免创建包含块把全屏浮层困在侧边栏)。文件路径做了工作区包含校验,越界请求一律拒绝;浏览器托管允许绝对路径(本地调试工具)。
@@ -227,8 +229,9 @@ DEEPHARNESS/
 │  └─ package.json             # Electron 依赖
 ├─ plugins/
 │  ├─ deep-harness-appearance/ # 常驻增强插件(文件/终端/统计/技能/环境/浏览器/外观/皮肤/费用)
-│  │  ├─ lib/index.js          # host 半:/deepharness/api/* 路由(含背景图托管、浏览器文件托管)
+│  │  ├─ lib/index.js          # host 半:/deepharness/api/* 路由(含背景图托管、浏览器文件托管、皮肤托管)
 │  │  ├─ lib/client.js         # 浏览器半:会话视图标签 + 设置项 + 16:9 背景裁剪
+│  │  ├─ skins/                # 社区皮肤 CSS(dsh-web-ui BSD-3-Clause + 女仆工坊 CC BY-NC-SA)
 │  │  └─ test/                 # 契约测试(client-bundle.test.cjs)
 │  ├─ deep-harness-tools/      # 工具插件(一键夺舍/人设 soul.md/长期记忆/后端切换)
 │  │  ├─ lib/index.js          # host 半:systemPrompt 区块 + 记忆捕获 + /deepharness/tools/* 路由
@@ -313,6 +316,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemovePlugin  # 同时
   - [zouyuxuan122 / Deepseek-Harness-EAC(揽尽万象)](https://github.com/zouyuxuan122/Deepseek-Harness-EAC)
   - [myYangyunfan / dsh_desktop](https://github.com/myYangyunfan/dsh_desktop)([Gitee 镜像](https://gitee.com/my-yang-yunfan/dsh_desktop))
 - 感谢 [QCYTSN / dsh-dafeiyu](https://github.com/QCYTSN/dsh-dafeiyu) 贡献大肥鱼桌面伴侣(宠物 + 聊天,MIT)
+- 感谢 [zhu1090093659 / dsh-web-ui](https://github.com/zhu1090093659/dsh-web-ui)(BSD-3-Clause)与 [Small-tailqwq / dsh-deep-whale](https://github.com/Small-tailqwq/dsh-deep-whale)(CC BY-NC-SA 4.0,禁止商用)提供内置社区皮肤
 - 感谢 DeepSeek AI 助手在本项目中的代码实现、DEBUG 与兼容性优化;应用内设置 →「感谢名单」可查看完整名单
 
 ---
