@@ -1,0 +1,2 @@
+name: 极简V2模式
+description: 动态极简：主 Agent 与子 Agent 首轮仅暴露双工具（bash/pwsh + str_replace_editor），提示词固定为 "You are a helpful software engineer assistant."；首次工具调用后开放完整目录；压缩后重新锚定回极简态。
