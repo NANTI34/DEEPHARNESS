@@ -1610,10 +1610,13 @@ window.__ModuleLoader__.load({
 
       // 访客页内守卫:把 target=_blank 链接改为同页跳转(就地打开,不弹新窗口)。
       // 完全在页面内部处理,不依赖主进程/allowpopups,每次导航后重新注入。
+      // 同时安装点击计数器(诊断:点击是否真正到达页面)。
       const GUARD_SCRIPT = "(() => { " +
         "if (window.__dshLinkGuard) return 'already'; " +
         "window.__dshLinkGuard = true; " +
+        "window.__dshClicks = 0; " +
         "document.addEventListener('click', (e) => { " +
+        "window.__dshClicks = (window.__dshClicks || 0) + 1; " +
         "const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; " +
         "if (a && a.target === '_blank' && /^https?:/.test(a.href)) { e.preventDefault(); e.stopPropagation(); location.href = a.href; } " +
         "}, true); " +
@@ -1625,45 +1628,77 @@ window.__ModuleLoader__.load({
           el.executeJavaScript(GUARD_SCRIPT).catch(() => { /* 跨源/受限页面忽略 */ });
         }
       };
+      const dshLog = (kind, detail) => {
+        try {
+          if (window.__dshDesktop && typeof window.__dshDesktop.log === "function") {
+            window.__dshDesktop.log("browser", kind, String(detail || "").slice(0, 160));
+          }
+        } catch { /* ignore */ }
+      };
 
+      // 挂载时恢复上次位置;webview 创建后(current 变化)绑定监听 + 注入守卫
       React.useEffect(() => {
-        // 恢复上次浏览位置(优先取访客页当前 URL,其次地址栏输入)
         if (!current) {
           const guest = lsGet("deepharness.browser.guestUrl", "");
           const saved = guest || lsGet("deepharness.browser.url", "");
           if (saved) navigate(saved);
         }
-        const el = frameRef.current;
-        if (el && el.tagName === "WEBVIEW") {
-          const onFail = (e) => {
-            if (e.isMainFrame) setFailMsg((e.errorDescription || e.validationMessage || "未知错误") + "(" + (e.errorCode || "?") + ")");
-          };
-          const onDone = () => { setFailMsg(""); };
-          const onNav = () => {
-            setFailMsg("");
-            try { setPageUrl(el.getURL() || ""); } catch { /* ignore */ }
-            saveGuestUrl();
-          };
-          const onNewWindow = (e) => {
-            // 兜底:即便主进程未拦截,也在渲染进程就地打开
-            try { e.preventDefault(); el.src = String(e.url); } catch { /* ignore */ }
-          };
-          el.addEventListener("did-fail-load", onFail);
-          el.addEventListener("did-finish-load", () => { injectGuard(); onDone(); });
-          el.addEventListener("did-navigate", () => { injectGuard(); onNav(); });
-          el.addEventListener("did-navigate-in-page", () => { injectGuard(); onNav(); });
-          el.addEventListener("new-window", onNewWindow);
-          return () => {
-            saveGuestUrl(); // 切走标签页时记住当前位置,回来不丢
-            el.removeEventListener("did-fail-load", onFail);
-            el.removeEventListener("did-finish-load", onDone);
-            el.removeEventListener("did-navigate", onNav);
-            el.removeEventListener("did-navigate-in-page", onNav);
-            el.removeEventListener("new-window", onNewWindow);
-          };
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
+
+      React.useEffect(() => {
+        if (!current) return;
+        const el = frameRef.current;
+        if (!el || el.tagName !== "WEBVIEW") return;
+        const onFail = (e) => {
+          if (e.isMainFrame) {
+            setFailMsg((e.errorDescription || e.validationMessage || "未知错误") + "(" + (e.errorCode || "?") + ")");
+            dshLog("fail", e.errorCode + " " + (e.errorDescription || ""));
+          }
+        };
+        const onDone = () => { setFailMsg(""); dshLog("load", el.getURL ? el.getURL().slice(0, 120) : ""); };
+        const onNav = () => {
+          setFailMsg("");
+          try { setPageUrl(el.getURL() || ""); } catch { /* ignore */ }
+          saveGuestUrl();
+          dshLog("nav", el.getURL ? el.getURL().slice(0, 120) : "");
+        };
+        const onNewWindow = (e) => {
+          // 兜底:即便主进程未拦截,也在渲染进程就地打开
+          dshLog("newwindow", String(e.url || "").slice(0, 120));
+          try { e.preventDefault(); el.src = String(e.url); } catch { /* ignore */ }
+        };
+        el.addEventListener("did-fail-load", onFail);
+        el.addEventListener("did-finish-load", () => { injectGuard(); onDone(); });
+        el.addEventListener("did-navigate", () => { injectGuard(); onNav(); });
+        el.addEventListener("did-navigate-in-page", () => { injectGuard(); onNav(); });
+        el.addEventListener("new-window", onNewWindow);
+        injectGuard(); // webview 可能已加载,立即补一次
+        dshLog("attach", el.getURL ? el.getURL().slice(0, 120) : "");
+        return () => {
+          saveGuestUrl(); // 切走标签页时记住当前位置,回来不丢
+          el.removeEventListener("did-fail-load", onFail);
+          el.removeEventListener("did-finish-load", onDone);
+          el.removeEventListener("did-navigate", onNav);
+          el.removeEventListener("did-navigate-in-page", onNav);
+          el.removeEventListener("new-window", onNewWindow);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [current]);
+
+      // 诊断:轮询访客页点击计数(点击是否到达页面),展示在状态栏
+      const [diagClicks, setDiagClicks] = React.useState(-1);
+      React.useEffect(() => {
+        if (!current) return;
+        const timer = setInterval(() => {
+          const el = frameRef.current;
+          if (el && typeof el.executeJavaScript === "function") {
+            el.executeJavaScript("window.__dshClicks || 0")
+              .then((n) => setDiagClicks(Number(n) || 0))
+              .catch(() => { /* ignore */ });
+          }
+        }, 2000);
+        return () => clearInterval(timer);
+      }, [current]);
 
       const navigate = (raw) => {
         const r = browserResolve(raw, engine);
@@ -1778,9 +1813,11 @@ window.__ModuleLoader__.load({
 
       return React.createElement("div", { style: { ...STYLES.panel, gap: 6 } },
         toolbar,
-        (status || pageUrl) && React.createElement("div", {
+        (status || pageUrl || diagClicks >= 0) && React.createElement("div", {
           style: { fontSize: 11.5, color: "var(--dsw-alias-label-tertiary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: "none" }
-        }, pageUrl ? (status ? status + " · " : "") + pageUrl : status),
+        },
+          (pageUrl ? (status ? status + " · " : "") + pageUrl : status) +
+          (diagClicks >= 0 ? " · 页面点击:" + diagClicks : "")),
         failMsg && React.createElement("div", {
           style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, fontSize: 12, background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.4)", color: "#F87171", flex: "none" }
         },
