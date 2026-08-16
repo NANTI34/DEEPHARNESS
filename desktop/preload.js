@@ -7,6 +7,8 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('__dshDesktop', {
   isDesktop: true,
+  // 「浏览器」标签:桌面壳启用 webviewTag,页面据此使用 <webview>(独立 Chromium + 独立 DevTools)
+  webview: true,
   versions: {
     desktop: ipcRenderer.sendSync('dsh:versions')
   },

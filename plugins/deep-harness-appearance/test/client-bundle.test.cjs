@@ -87,9 +87,9 @@ const fakeCtx = {
 mod.apply(fakeCtx)
 
 const viewTabs = slotRegs.filter(r => r.name === 'conversation.view').map(r => r.reg)
-assert.strictEqual(viewTabs.length, 5, 'five conversation.view tabs expected')
+assert.strictEqual(viewTabs.length, 6, 'six conversation.view tabs expected')
 const ids = viewTabs.map(r => r.id).sort()
-assert.deepStrictEqual(ids, ['env', 'files', 'skills', 'stats', 'terminal'], 'tab ids must be files/terminal/stats/skills/env')
+assert.deepStrictEqual(ids, ['browser', 'env', 'files', 'skills', 'stats', 'terminal'], 'tab ids must be browser/files/terminal/stats/skills/env')
 for (const tab of viewTabs) {
   assert.strictEqual(typeof tab.label, 'function')
   assert.strictEqual(typeof tab.label(), 'string')

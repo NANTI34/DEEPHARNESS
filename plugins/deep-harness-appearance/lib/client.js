@@ -1403,6 +1403,154 @@ window.__ModuleLoader__.load({
       );
     }
 
+    // ── 浏览器标签页:内置轻量浏览器(搜索 / 网址 / 本地纯前端调试 / F12)──
+    const BROWSER_ENGINES = {
+      baidu: { label: "百度", url: (q) => "https://www.baidu.com/s?wd=" + encodeURIComponent(q) },
+      bing: { label: "必应", url: (q) => "https://www.bing.com/search?q=" + encodeURIComponent(q) },
+      google: { label: "Google", url: (q) => "https://www.google.com/search?q=" + encodeURIComponent(q) }
+    };
+    const BROWSER_SERVE = "/deepharness/browser/serve/";
+
+    // 输入解析:网址 / 绝对路径 / 工作区相对路径 / 裸域名 / 搜索词
+    function browserResolve(raw, engine) {
+      const s = String(raw || "").trim();
+      if (!s) return { type: "empty" };
+      if (/^https?:\/\//i.test(s)) return { type: "url", url: s };
+      const toServe = (p) => window.location.origin + BROWSER_SERVE + encodeURIComponent(p.replace(/\\/g, "/"));
+      if (/^[a-zA-Z]:[\\/]/.test(s) || s.startsWith("/") || s.startsWith("\\")) return { type: "file", url: toServe(s) };
+      if (s.includes("/") || s.includes("\\") || /\.html?$/i.test(s)) return { type: "file", url: toServe(s) };
+      if (s.includes(".") && !/\s/.test(s)) return { type: "url", url: "https://" + s };
+      const eng = BROWSER_ENGINES[engine] || BROWSER_ENGINES.baidu;
+      return { type: "search", url: eng.url(s) };
+    }
+
+    function BrowserView() {
+      const isDesktop = typeof window.__dshDesktop !== "undefined" && !!window.__dshDesktop.isDesktop;
+      const useWebview = isDesktop && window.__dshDesktop && window.__dshDesktop.webview === true;
+      const [input, setInput] = React.useState(lsGet("deepharness.browser.url", ""));
+      const [current, setCurrent] = React.useState("");
+      const [engine, setEngine] = React.useState(lsGet("deepharness.browser.engine", "baidu"));
+      const [status, setStatus] = React.useState("");
+      const [recent, setRecent] = React.useState(JSON.parse(lsGet("deepharness.browser.recent", "[]")));
+      const frameRef = React.useRef(null);
+
+      React.useEffect(() => {
+        if (!current) {
+          const saved = lsGet("deepharness.browser.url", "");
+          if (saved) navigate(saved);
+        }
+        const el = frameRef.current;
+        if (el && el.tagName === "WEBVIEW") {
+          const onFail = (e) => setStatus("加载失败: " + (e.errorDescription || e.validationMessage || "未知错误"));
+          const onDone = () => setStatus("");
+          el.addEventListener("did-fail-load", onFail);
+          el.addEventListener("did-finish-load", onDone);
+          return () => {
+            el.removeEventListener("did-fail-load", onFail);
+            el.removeEventListener("did-finish-load", onDone);
+          };
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+
+      const navigate = (raw) => {
+        const r = browserResolve(raw, engine);
+        if (r.type === "empty") { setStatus("请输入搜索词、网址或本地 index.html 路径"); return; }
+        lsSet("deepharness.browser.url", raw);
+        const prev = JSON.parse(lsGet("deepharness.browser.recent", "[]"));
+        const next = [raw, ...prev.filter((x) => x !== raw)].slice(0, 8);
+        lsSet("deepharness.browser.recent", JSON.stringify(next));
+        setRecent(next);
+        setCurrent(r.url);
+        setStatus(r.type === "search" ? "正在搜索: " + raw : r.type === "file" ? "本地文件: " + raw : "已打开: " + r.url);
+      };
+
+      const openDevTools = () => {
+        const el = frameRef.current;
+        if (el && typeof el.openDevTools === "function") { el.openDevTools({ mode: "detach" }); return; }
+        setStatus(useWebview
+          ? "请直接在键盘按 F12 打开开发者工具"
+          : "请按浏览器 F12 打开开发者工具,再在顶部帧列表选择本 iframe 进行调试");
+      };
+
+      const dropFile = (e) => {
+        e.preventDefault();
+        const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (!f) return;
+        const p = f.path || f.webkitRelativePath;
+        if (p) { setInput(p); navigate(p); }
+        else setStatus("当前环境无法读取拖入文件路径,请手动输入路径");
+      };
+
+      const toolbar = React.createElement("div", {
+        style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" },
+        onDragOver: (e) => e.preventDefault(),
+        onDrop: dropFile
+      },
+        React.createElement("select", {
+          value: engine,
+          onChange: (e) => { const v = e.target.value; setEngine(v); lsSet("deepharness.browser.engine", v); },
+          style: { padding: "5px 6px", borderRadius: 6, border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)", fontSize: 12, outline: "none" },
+          title: "搜索方式"
+        },
+          Object.keys(BROWSER_ENGINES).map((k) =>
+            React.createElement("option", { key: k, value: k }, BROWSER_ENGINES[k].label))),
+        React.createElement("input", {
+          list: "dsh-browser-recent",
+          value: input,
+          onChange: (e) => setInput(e.target.value),
+          onKeyDown: (e) => { if (e.key === "Enter") navigate(input); },
+          placeholder: "搜索词 / 网址 / 本地 index.html(如 D:/demo/index.html 或 web-app/dist/index.html,可拖入文件)",
+          style: {
+            flex: 1, minWidth: 180, padding: "6px 10px", borderRadius: 6,
+            border: "1px solid var(--dsw-alias-border-l2)",
+            background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)",
+            fontSize: 12, outline: "none"
+          }
+        }),
+        React.createElement("datalist", { id: "dsh-browser-recent" },
+          recent.map((r, i) => React.createElement("option", { key: i, value: r }))),
+        React.createElement("button", { style: STYLES.button, onClick: () => navigate(input) }, "前往"),
+        React.createElement("button", {
+          style: STYLES.button,
+          onClick: () => {
+            const el = frameRef.current;
+            if (!el) return;
+            if (typeof el.reload === "function") el.reload();
+            else el.src = el.src;
+          }
+        }, "刷新"),
+        React.createElement("button", { style: STYLES.button, onClick: openDevTools }, "F12 调试")
+      );
+
+      const frame = current === ""
+        ? React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 } },
+            React.createElement("div", { style: { textAlign: "center", color: "var(--dsw-alias-label-tertiary)", fontSize: 13, lineHeight: 2.1, maxWidth: 560 } },
+              React.createElement("div", { style: { fontSize: 42, lineHeight: 1.4 } }, "🌐"),
+              React.createElement("div", null, "内置轻量浏览器:搜索、打开网址、调试本地纯前端应用"),
+              React.createElement("div", null, "输入本地 index.html 路径(如 D:/demo/index.html)即可运行,支持 ES module / fetch"),
+              React.createElement("div", null, useWebview
+                ? "桌面端:内嵌 Chromium 窗口,按 F12 或点「F12 调试」打开独立开发者工具"
+                : "浏览器模式:按 F12 后在开发者工具顶栏帧列表选择本 iframe 进行调试")))
+        : useWebview
+        ? React.createElement("webview", {
+            ref: frameRef, src: current,
+            style: { flex: 1, minHeight: 0, borderRadius: 8, border: "1px solid var(--dsw-alias-border-l2)", background: "#FFFFFF" }
+          })
+        : React.createElement("iframe", {
+            ref: frameRef, src: current,
+            style: { flex: 1, minHeight: 0, borderRadius: 8, border: "1px solid var(--dsw-alias-border-l2)", background: "#FFFFFF" }
+          });
+
+      return React.createElement("div", { style: { ...STYLES.panel, gap: 6 } },
+        toolbar,
+        status && React.createElement("div", {
+          style: { fontSize: 11.5, color: "var(--dsw-alias-label-tertiary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: "none" }
+        }, status),
+        frame
+      );
+    }
+
     // ── 插件主体 ────────────────────────────────────────────────────
     const inject = ["slots", "theme"];
 
@@ -1412,6 +1560,15 @@ window.__ModuleLoader__.load({
 
       // 供设置组件重取(theme 服务实例)
       try { window.__dshClientTheme = theme; } catch { /* ignore */ }
+
+      // 会话视图栏:「浏览器」标签(内置轻量浏览器:搜索 / 本地纯前端调试 / F12)
+      ctx.slots.inject("conversation.view", () => slots.register({
+        name: "conversation.view",
+        id: "browser",
+        order: 10,
+        label: () => "浏览器",
+        inject: (sessionId) => ({ sessionId })
+      }, BrowserView));
 
       // 会话视图栏:「文件」标签
       ctx.slots.inject("conversation.view", () => slots.register({

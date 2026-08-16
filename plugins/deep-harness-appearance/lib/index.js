@@ -21,6 +21,25 @@ const MAX_EXEC_MS = 300000
 const FONT_EXTS = new Set(['.ttf', '.otf', '.woff', '.woff2'])
 const BG_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif'])
 const BG_MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif' }
+// 「浏览器」标签:本地纯前端应用静态托管(与页面同源,ES module/fetch 可用)
+const BROWSER_PREFIX = '/deepharness/browser'
+const BROWSER_MIME = {
+  '.html': 'text/html; charset=utf-8', '.htm': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
+  '.cjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8', '.map': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.ico': 'image/x-icon',
+  '.bmp': 'image/bmp', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf',
+  '.otf': 'font/otf', '.eot': 'application/vnd.ms-fontobject',
+  '.wasm': 'application/wasm', '.txt': 'text/plain; charset=utf-8', '.md': 'text/plain; charset=utf-8',
+  '.xml': 'application/xml; charset=utf-8', '.pdf': 'application/pdf',
+  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
+  '.webmanifest': 'application/manifest+json', '.yaml': 'text/plain; charset=utf-8',
+  '.yml': 'text/plain; charset=utf-8', '.csv': 'text/plain; charset=utf-8',
+  '.zip': 'application/zip', '.gz': 'application/gzip', '.tar': 'application/x-tar',
+  '.dat': 'application/octet-stream', '.bin': 'application/octet-stream'
+}
 // 文件树默认隐藏的目录/文件
 const IGNORED_NAMES = new Set([
   'node_modules', '.git', '.svn', '.hg', '.venv', '.idea', '.vscode',
@@ -78,6 +97,16 @@ export function apply(ctx) {
     const abs = path.isAbsolute(absPath) ? absPath : path.resolve(root, absPath)
     const rel = path.relative(root, abs)
     return rel === '' ? '.' : rel.split(path.sep).join('/')
+  }
+
+  /** 「浏览器」目标解析:绝对路径(盘符/UNC)直接用;其余按工作区相对路径 */
+  function browserTarget(raw) {
+    const str = String(raw || '').trim().replace(/^\/+/, '')
+    if (!str) throw new Error('missing path')
+    if (/^[a-zA-Z]:[\\/]/.test(str) || str.startsWith('\\\\')) {
+      return path.resolve(str.replace(/\//g, path.sep))
+    }
+    return safePath(str)
   }
 
   // ── 文件操作(node:fs + 工作区包含约束;用户主动操作,无需观测策略)─
@@ -337,6 +366,60 @@ export function apply(ctx) {
       return
     }
     sendJson(res, 200, { ok: true, path: relOf(target), size: raw.length, binary: false, content: raw.toString('utf8') })
+  })
+
+  // 「浏览器」标签:本地文件静态托管(同源 http,纯前端应用 ES module/fetch/worker 均可运行)。
+  // 路径 = /deepharness/browser/serve/<URL 编码的绝对路径或工作区相对路径>;目录自动找 index.html。
+  prefix('GET', BROWSER_PREFIX + '/serve', async (req, res) => {
+    const url = new URL(req.url, 'http://x')
+    const raw = decodeURIComponent(url.pathname.slice((BROWSER_PREFIX + '/serve').length + 1))
+    let target
+    let stat
+    try {
+      target = browserTarget(raw)
+      stat = await fsStat(target)
+    } catch {
+      sendJson(res, 404, { ok: false, error: 'not found: ' + raw })
+      return
+    }
+    if (stat.type === 'dir') {
+      target = path.join(target, 'index.html')
+      try { stat = await fsStat(target) } catch {
+        sendJson(res, 404, { ok: false, error: 'no index.html in directory: ' + raw })
+        return
+      }
+    }
+    const mime = BROWSER_MIME[path.extname(target).toLowerCase()] || 'application/octet-stream'
+    const data = await fsp.readFile(target)
+    const rangeHeader = req.headers.range
+    if (rangeHeader) {
+      const m = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader)
+      if (m && (m[1] || m[2])) {
+        const start = m[1] ? parseInt(m[1], 10) : Math.max(0, data.length - parseInt(m[2], 10))
+        const end = m[2] ? Math.min(parseInt(m[2], 10), data.length - 1) : data.length - 1
+        if (start >= 0 && start < data.length && start <= end) {
+          res.writeHead(206, {
+            'content-type': mime,
+            'content-range': `bytes ${start}-${end}/${data.length}`,
+            'content-length': end - start + 1,
+            'accept-ranges': 'bytes',
+            'cache-control': 'no-store'
+          })
+          res.end(data.subarray(start, end + 1))
+          return
+        }
+      }
+      res.writeHead(416, { 'content-range': `bytes */${data.length}` })
+      res.end()
+      return
+    }
+    res.writeHead(200, {
+      'content-type': mime,
+      'content-length': data.length,
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff'
+    })
+    res.end(data)
   })
 
   prefix('POST', API_PREFIX + '/write', async (req, res) => {

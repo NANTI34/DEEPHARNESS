@@ -452,7 +452,8 @@ if (!gotLock) {
         preload: path.join(__dirname, 'preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: true
+        sandbox: true,
+        webviewTag: true
       }
     })
     win.__normalBounds = { ...win.getBounds() }
@@ -523,6 +524,25 @@ if (!gotLock) {
     if (IS_DEBUG) win.webContents.openDevTools({ mode: 'detach' })
     bootLog('load status page')
     win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(STATUS_HTML))
+
+    // 「浏览器」标签:主窗口 F12 → 切换开发者工具;内嵌 webview 的 F12 →
+    // 打开该 webview 的独立开发者工具(调试本地纯前端应用)
+    win.webContents.on('before-input-event', (event, input) => {
+      if (input.type === 'keyDown' && input.key === 'F12' && !input.isAutoRepeat) {
+        event.preventDefault()
+        if (win.webContents.isDevToolsOpened()) win.webContents.closeDevTools()
+        else win.webContents.openDevTools({ mode: 'detach' })
+      }
+    })
+    win.webContents.on('did-attach-webview', (_event, guest) => {
+      bootLog('webview attached (browser tab)')
+      guest.on('before-input-event', (event, input) => {
+        if (input.type === 'keyDown' && input.key === 'F12' && !input.isAutoRepeat) {
+          event.preventDefault()
+          guest.openDevTools({ mode: 'detach' })
+        }
+      })
+    })
   }
 
   async function bootAndLoad() {
