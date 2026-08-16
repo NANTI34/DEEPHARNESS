@@ -72,12 +72,15 @@ if ($SkipNpmInstall -or ((Test-Path (Join-Path $desktopDir 'node_modules\electro
     Write-Host '      desktop/ 依赖安装完成' -ForegroundColor Green
 }
 
-# 4. 安装常驻插件(外观/费用/文件视图/终端面板 → web profile 永久加载)
-$pluginDir = Join-Path $Root 'plugins\deep-harness-appearance'
-Write-Host '[4/5] 安装常驻插件(外观与费用 → web profile)...' -ForegroundColor Yellow
-if (-not (Test-Path (Join-Path $pluginDir 'package.json'))) {
-    Write-Host '      警告:未找到 plugins\deep-harness-appearance,跳过插件安装' -ForegroundColor Yellow
-} else {
+# 4. 安装常驻插件(外观/费用/文件视图/终端/浏览器 + 工具:夺舍/人设/记忆/后端 → web profile 永久加载)
+$enhancePlugins = @('deep-harness-appearance', 'deep-harness-tools')
+Write-Host '[4/5] 安装常驻插件(' + ($enhancePlugins -join ' + ') + ' → web profile)...' -ForegroundColor Yellow
+foreach ($pluginName in $enhancePlugins) {
+    $pluginDir = Join-Path $Root "plugins\$pluginName"
+    if (-not (Test-Path (Join-Path $pluginDir 'package.json'))) {
+        Write-Host "      警告:未找到 plugins\$pluginName,跳过插件安装" -ForegroundColor Yellow
+        continue
+    }
     # 确保 pnpm 可用(dsh plugin 命令依赖 pnpm 管理 profile 依赖)
     $pnpm = Get-Command pnpm -ErrorAction SilentlyContinue
     if (-not $pnpm) {
@@ -91,28 +94,28 @@ if (-not (Test-Path (Join-Path $pluginDir 'package.json'))) {
     try {
         if ($pnpm) {
             Write-Host "      使用 pnpm: $($pnpm.Source)" -ForegroundColor Green
-            & node (Join-Path $appDir 'lib\bin.js') plugin --profile web add '.\plugins\deep-harness-appearance'
-            if ($LASTEXITCODE -ne 0) { throw "插件安装失败(dsh plugin,退出码 $LASTEXITCODE)" }
-            Write-Host '      插件已写入 %USERPROFILE%\.dsh\profiles\web(随服务启动自动加载)' -ForegroundColor Green
+            & node (Join-Path $appDir 'lib\bin.js') plugin --profile web add ".\plugins\$pluginName"
+            if ($LASTEXITCODE -ne 0) { throw "插件安装失败($pluginName,dsh plugin,退出码 $LASTEXITCODE)" }
+            Write-Host "      插件 $pluginName 已写入 %USERPROFILE%\.dsh\profiles\web(随服务启动自动加载)" -ForegroundColor Green
         } else {
             # 无 pnpm 回退:手动复制插件到 profile 依赖目录,并把加载行写入 home 用户层
             Write-Host '      pnpm 不可用,使用手动复制回退方案...' -ForegroundColor Yellow
             $home = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
-            $profileNm = Join-Path $home 'profiles\node_modules\deep-harness-appearance'
+            $profileNm = Join-Path $home "profiles\node_modules\$pluginName"
             New-Item -ItemType Directory -Force -Path $profileNm | Out-Null
             Copy-Item (Join-Path $pluginDir '*') $profileNm -Recurse -Force
             $homePatch = Join-Path $home 'cordis.patch.yml'
-            $row = @'
+            $row = @"
 - insert:
-    - id: deep-harness-appearance
-      name: deep-harness-appearance
-'@
+    - id: $pluginName
+      name: $pluginName
+"@
             $content = if (Test-Path $homePatch) { Get-Content $homePatch -Raw } else { "[]" + [Environment]::NewLine }
-            if ($content -notmatch 'deep-harness-appearance') {
+            if ($content -notmatch [regex]::Escape($pluginName)) {
                 $content = $content.TrimEnd() + [Environment]::NewLine + $row
                 Set-Content -Path $homePatch -Value $content -Encoding UTF8
             }
-            Write-Host "      插件已复制到 $profileNm 并写入 $homePatch" -ForegroundColor Green
+            Write-Host "      插件 $pluginName 已复制到 $profileNm 并写入 $homePatch" -ForegroundColor Green
         }
     } finally { Pop-Location }
 }

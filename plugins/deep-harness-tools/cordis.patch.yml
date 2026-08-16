@@ -1,0 +1,5 @@
+# DEEPHARNESS 工具插件 patch:host 行(提示词区块/记忆捕获/路由)+ 自动发现的 client 行
+# 安装方式:`dsh plugin --profile web add <本目录>`(由 install.ps1 自动完成)
+- insert:
+    - id: deep-harness-tools
+      name: 'deep-harness-tools'

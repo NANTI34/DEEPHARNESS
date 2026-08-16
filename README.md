@@ -33,7 +33,12 @@
 - 📊 **统计/技能/环境(常驻)** — 会话视图栏另有「统计」(会话 token/耗时/费用明细)、「技能」(内置 Agent 预设与本地技能库浏览)、「环境」(插件版本/路径/诊断,一键复制)标签
 - 🌐 **内置轻量浏览器(常驻)** — 会话视图栏「浏览器」标签:搜索(百度/必应/Google)、打开网址、**调试本地纯前端应用**——输入本地 `index.html` 路径(或直接把文件拖进地址栏),经同源路由托管,ES module / fetch / Worker 均可运行;桌面端为独立 Chromium 内嵌窗口,**F12 打开独立开发者工具**,站点弹窗(target=_blank,如 B站视频卡片)自动就地打开,视频支持全屏
 - 🐟 **大肥鱼桌面伴侣** — DSH 状态驱动的桌面宠物(`plugins/dsh-dafeiyu`):实时显示思考/干活/等待/成功/出错状态卡,右键可调整大小/减少动态/隐藏/关闭;**点击状态卡右上角 ⋯ 打开聊天对话框**与鱼对话
-- 🎨 **品牌外观(常驻)** — 设置 →「DEEPHARNESS 外观」独立区块:品牌深蓝顶栏/侧栏色(可自定义主色)、界面字体切换(可导入字体)、渐变/图片背景预设、**金边装饰开关**(全界面金色描边光晕),选择保存在浏览器本地,重启后自动恢复
+- 🎨 **品牌外观(常驻)** — 设置 →「DEEPHARNESS 外观」独立区块:品牌深蓝顶栏/侧栏色(可自定义主色)、界面字体切换(可导入字体)、渐变/图片背景预设、**金边装饰开关**(全界面金色描边光晕)、**一键换肤(5 款预设皮肤:经典 XP 蓝/初音绿黑/樱花粉/深空紫/赛博霓虹,互斥切换可恢复默认)**、**侧边卡片开关**(会话视图栏标签逐项显示/隐藏),选择保存在浏览器本地,重启后自动恢复
+- 🛠️ **DEEPHARNESS 工具(常驻)** — 设置 →「DEEPHARNESS 工具」独立区块:
+  - **一键夺舍** — 选择 Codex / Claude Code 目录一键迁移:自动注册为工作区、新建会话并发送迁移指令,AI 把技能(skills)、MCP 服务器、长期记忆(CLAUDE.md / AGENTS.md)全部搬进 DSH(也可仅复制指令)
+  - **自定义提示词(soul.md)** — markdown 人设卡注入系统提示词,保存后约 300ms 热重载,无需重启
+  - **长期记忆** — 自动捕获每轮「用户提问 → 助手答复」写入本地记忆库(可搜索/清空),按量注入新会话提示词,实现跨会话记忆
+  - **后端切换** — 一键切换默认模型后端(官方 v4 Pro / v4 Flash / opencode-go 第三方 / 自定义 provider+model),原配置自动备份
 - 💾 **数据 100% 本地** — 配置、会话、技能、沙箱全部保存在 `%USERPROFILE%\.dsh`
 - 📦 **便携分发** — 应用本体在 `app/` 与 `desktop/`,克隆仓库 + 一条安装命令即可使用
 - ⚖️ **MIT 开源** — 应用本体来自 DeepSeek 官方开源项目,本项目为纯封装增强
@@ -92,7 +97,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 1. **检查 Node.js**(缺失时打开官网引导安装)
 2. **安装应用依赖**(`app/` 的 npm install,首次约 1–3 分钟;已装过则自动跳过)
 3. **安装桌面壳依赖**(`desktop/` 的 Electron,首次需下载约 120MB,失败自动切换国内镜像重试)
-4. **安装常驻增强插件**(把 `plugins\deep-harness-appearance` 写入 web profile,**随服务启动自动加载**,无需每次授权)
+4. **安装常驻增强插件**(`plugins\deep-harness-appearance` + `plugins\deep-harness-tools` 写入 web profile,**随服务启动自动加载**,无需每次授权)
 5. **创建桌面快捷方式**:
    - `DEEPHARNESS` — **Electron 原生应用窗口**(主入口)
    - `DEEPHARNESS(浏览器)` — 默认浏览器回退入口
@@ -156,6 +161,8 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
 - **图片背景 + 16:9 裁剪** — 设置页上传任意图片,弹出固定 16:9 比例裁剪框(拖动定位、缩放 0.05×–8× 可截超大画面或细节),确认后自动应用并保存到 `%USERPROFILE%\.dsh\backgrounds`;仓库自带 `assets\backgrounds\默认.jpg`(2560×1440)作为**出厂默认背景**;用户上传的背景可一键删除(出厂自带受保护)
 - **半透明玻璃视效** — 有背景(渐变或图片)时,侧边栏呈现**调亮的品牌蓝半透明**,聊天/轨迹等内容卡片同步半透明化,壁纸在侧边栏、聊天区、轨迹界面处处可见,不再有大片纯色遮挡
 - **金边装饰** — 设置页「装饰」开关:开启后全界面(侧边栏、面板、对话框、消息气泡、输入区、标签页、卡片等)披上金色描边与光晕,繁复华丽风格
+- **一键换肤(预设皮肤)** — 设置页「一键换肤」:5 款预设一键互斥切换(经典 XP 蓝 / 初音绿黑 / 樱花粉 / 深空紫 / 赛博霓虹),覆盖界面主色与面板风格,与品牌色/金边/背景互相独立,可随时恢复默认
+- **侧边卡片(标签开关)** — 设置页「侧边卡片」:会话视图栏的「浏览器/文件/终端/统计/技能/环境」标签逐项显示/隐藏(默认全开,修改后刷新页面生效)
 - **费用统计** — 「文件」「终端」标签页顶部实时显示本会话费用估算:
   - 基于会话投影中的真实 token 用量(输入 / 缓存命中 / 输出)
   - **自动适配 2026-08-17 峰谷定价**:8.17 前按旧价;之后按北京时间高峰(9:00-12:00、14:00-18:00,基准价)与空闲时段(半价)自动切换
@@ -173,6 +180,16 @@ powershell -ExecutionPolicy Bypass -File .\launcher\DEEPHARNESS.ps1 -Workspace D
   - 点击宠物有摸头/戳/尾巴互动,双击表白;右键菜单可调整大小(小/标准/大)、减少动态、本次隐藏、本次关闭
   - **点击状态卡右上角 ⋯ 打开「大肥鱼 · 聊天」对话框**:气泡聊天、Enter 发送,鱼会按关键词回复并汇报当前状态/任务
   - 设置页(设置 → 大肥鱼)可开关、调大小、活跃程度、减少动态、是否响应子 Agent
+
+### DEEPHARNESS 工具插件(`plugins\deep-harness-tools`,随服务自动加载)
+
+设置 →「DEEPHARNESS 工具」独立区块:
+
+- **一键夺舍** — 参考社区 dsh-easy-setup 方案:选择 Codex / Claude Code 的安装/配置目录(或普通项目目录)→ 自动注册为工作区并新建会话 → 迁移指令自动发送,AI 全程用工具调用把技能(`.claude/skills`、`.codex/skills`、`skills/`)、MCP 服务器(`.mcp.json` / `config.toml` / `.claude.json`)与长期记忆(`CLAUDE.md` / `AGENTS.md` → `soul.md`)搬进 DSH,每一步可视化;也可「仅复制指令」手动执行
+- **自定义提示词(soul.md 人设)** — 默认 `%USERPROFILE%\.dsh\soul.md`(可换路径),markdown 人设卡注册为 `soul:persona` 系统提示词区块;文件被监听,保存后约 300ms 热重载,无需重启;设置页内直接编辑
+- **长期记忆** — 监听会话事件自动捕获每轮「用户提问 → 助手最终答复」,追加写入 `%USERPROFILE%\.dsh\memory\memories.jsonl`(上限 2000 条自动滚动);注册 `memory:recall` 提示词区块(函数文本,每次组装时重读),把最近 N 条(0–10,默认 5)注入新提示词,实现跨会话长期记忆;设置页支持关键词搜索与一键清空
+- **后端切换** — 读取/改写 `%USERPROFILE%\.dsh\settings.yaml` 的 `agent-default-model`(provider / model / reasoningEffort),预设:官方 v4 Pro、官方 v4 Flash、opencode-go v4 Flash(第三方,需已装对应 provider 预设)、自定义;写入前自动备份 `settings.yaml.bak`,只对新会话生效
+- 数据与配置:`deepharness-tools.json`(开关/路径/条数)、`memory\memories.jsonl`(记忆库),均在 `%USERPROFILE%\.dsh` 下
 
 > 插件工作原理:host 半在 `webServer` 上注册 `/deepharness/api/*` 路由(文件树/读写、命令执行、字体与背景图托管、**浏览器本地文件同源托管 `/deepharness/browser/serve/*`**),浏览器半通过 DSH 的 `dsh.client` 机制自动加载(会话视图栏标签 + 设置项)。背景生效机制:背景承载在 `html/body`,同时用主题令牌把框架/侧栏变为半透明(不使用 `backdrop-filter`,避免创建包含块把全屏浮层困在侧边栏)。文件路径做了工作区包含校验,越界请求一律拒绝;浏览器托管允许绝对路径(本地调试工具)。
 >
@@ -209,9 +226,13 @@ DEEPHARNESS/
 │  ├─ preload.js               # 页面桥(__dshDesktop:设置/字体/外部链接/状态事件)
 │  └─ package.json             # Electron 依赖
 ├─ plugins/
-│  ├─ deep-harness-appearance/ # 常驻增强插件(文件/终端/统计/技能/环境/浏览器/外观/费用)
+│  ├─ deep-harness-appearance/ # 常驻增强插件(文件/终端/统计/技能/环境/浏览器/外观/皮肤/费用)
 │  │  ├─ lib/index.js          # host 半:/deepharness/api/* 路由(含背景图托管、浏览器文件托管)
 │  │  ├─ lib/client.js         # 浏览器半:会话视图标签 + 设置项 + 16:9 背景裁剪
+│  │  └─ test/                 # 契约测试(client-bundle.test.cjs)
+│  ├─ deep-harness-tools/      # 工具插件(一键夺舍/人设 soul.md/长期记忆/后端切换)
+│  │  ├─ lib/index.js          # host 半:systemPrompt 区块 + 记忆捕获 + /deepharness/tools/* 路由
+│  │  ├─ lib/client.js         # 浏览器半:设置 →「DEEPHARNESS 工具」区块
 │  │  └─ test/                 # 契约测试(client-bundle.test.cjs)
 │  └─ dsh-dafeiyu/             # 大肥鱼桌面伴侣(宠物 + 聊天,内置 helper.exe)
 │     ├─ src/                  # host 半:helper 进程管理、会话状态桥接

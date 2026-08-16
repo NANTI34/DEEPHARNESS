@@ -675,6 +675,45 @@ window.__ModuleLoader__.load({
       { id: "forest", label: "深林", css: "linear-gradient(160deg, #0A0F0D 0%, #064E3B 55%, #065F46 100%)" },
       { id: "solidblue", label: "纯色深蓝", css: "#16204A" }
     ];
+
+    // ── 一键换肤(预设皮肤)──────────────────────────────────────────────
+    // 皮肤通过覆盖 DSH 主题令牌 + 少量结构样式实现,与品牌色/金边/背景系统独立;
+    // 开启皮肤时以皮肤为准,关闭即回默认。css 为空表示无皮肤。
+    const SKINS = [
+      { id: "none", label: "默认(无皮肤)", css: "" },
+      { id: "classic-xp", label: "经典 XP 蓝",
+        css: ':root{--dsw-alias-state-business-primary:#3B6FE0 !important;--dsw-alias-label-primary:#1F2D4D !important;--dsw-alias-label-secondary:#4A5A7A !important;--dsw-alias-label-tertiary:#7A86A0 !important;--dsw-alias-bg-layer-1:#F2F5FA !important;--dsw-alias-bg-layer-2:#E8EDF5 !important;--dsw-alias-bg-layer-3:#DEE5F0 !important;--dsw-alias-border-l2:#B9C6DC !important;--dsw-alias-state-success-primary:#1F8F3D !important;--dsw-alias-state-error-primary:#C03A2B !important;}\n' +
+          '[class*="sidebarCol"]{background:linear-gradient(180deg,#2F63D8 0%,#2456C0 60%,#1D4AA8 100%) !important;}\n' +
+          '[class*="sidebarCol"] [class*="_brand"]{background:rgba(255,255,255,0.12) !important;border-bottom:1px solid rgba(255,255,255,0.25) !important;}\n' +
+          '[class*="centerCol"], [class*="detailsCol"]{background:#F7F9FC !important;}\n' +
+          '[class*="panel"], [class*="card"], [class*="nodeItem"]{border-radius:6px !important;}\n' +
+          '::selection{background:#3B6FE0 !important;color:#fff !important;}' },
+      { id: "miku", label: "初音绿黑",
+        css: ':root{--dsw-alias-state-business-primary:#00C2B8 !important;--dsw-alias-label-primary:#E8FFFC !important;--dsw-alias-label-secondary:#9FD8D3 !important;--dsw-alias-label-tertiary:#6FA8A3 !important;--dsw-alias-bg-layer-1:#0E1B1A !important;--dsw-alias-bg-layer-2:#142624 !important;--dsw-alias-bg-layer-3:#1A302D !important;--dsw-alias-border-l2:#1F4B46 !important;--dsw-alias-state-success-primary:#00E5C3 !important;--dsw-alias-state-error-primary:#FF6EC7 !important;}\n' +
+          '[class*="sidebarCol"]{background:linear-gradient(180deg,#062B27 0%,#0A3A34 55%,#0E4A42 100%) !important;}\n' +
+          '[class*="sidebarCol"] [class*="_brand"]{background:rgba(0,194,184,0.16) !important;border-bottom:1px solid rgba(0,229,195,0.35) !important;}\n' +
+          '[class*="centerCol"], [class*="detailsCol"]{background:#0B1615 !important;}\n' +
+          '::selection{background:#00C2B8 !important;color:#001a17 !important;}' },
+      { id: "sakura", label: "樱花粉",
+        css: ':root{--dsw-alias-state-business-primary:#E86FA8 !important;--dsw-alias-label-primary:#4A2B3C !important;--dsw-alias-label-secondary:#7A5268 !important;--dsw-alias-label-tertiary:#A98A98 !important;--dsw-alias-bg-layer-1:#FDF2F7 !important;--dsw-alias-bg-layer-2:#FBEBF2 !important;--dsw-alias-bg-layer-3:#F9E3EC !important;--dsw-alias-border-l2:#F0C9DA !important;--dsw-alias-state-success-primary:#C96FA8 !important;--dsw-alias-state-error-primary:#E5484D !important;}\n' +
+          '[class*="sidebarCol"]{background:linear-gradient(180deg,#F7D6E4 0%,#F3C8DA 55%,#EEB9CF 100%) !important;}\n' +
+          '[class*="sidebarCol"] [class*="_brand"]{background:rgba(255,255,255,0.55) !important;border-bottom:1px solid rgba(232,111,168,0.4) !important;}\n' +
+          '[class*="centerCol"], [class*="detailsCol"]{background:#FFFBFD !important;}\n' +
+          '::selection{background:#E86FA8 !important;color:#fff !important;}' },
+      { id: "deep-space", label: "深空紫",
+        css: ':root{--dsw-alias-state-business-primary:#8B7CF6 !important;--dsw-alias-label-primary:#EDEAFF !important;--dsw-alias-label-secondary:#B9B1E8 !important;--dsw-alias-label-tertiary:#8A83B8 !important;--dsw-alias-bg-layer-1:#14122A !important;--dsw-alias-bg-layer-2:#1B1838 !important;--dsw-alias-bg-layer-3:#221E46 !important;--dsw-alias-border-l2:#3A3466 !important;--dsw-alias-state-success-primary:#7C6CF6 !important;--dsw-alias-state-error-primary:#F87171 !important;}\n' +
+          '[class*="sidebarCol"]{background:linear-gradient(180deg,#1A1638 0%,#241D52 55%,#2E2570 100%) !important;}\n' +
+          '[class*="sidebarCol"] [class*="_brand"]{background:rgba(139,124,246,0.18) !important;border-bottom:1px solid rgba(139,124,246,0.4) !important;}\n' +
+          '[class*="centerCol"], [class*="detailsCol"]{background:#100E22 !important;}\n' +
+          '::selection{background:#8B7CF6 !important;color:#fff !important;}' },
+      { id: "neon-cyber", label: "赛博霓虹",
+        css: ':root{--dsw-alias-state-business-primary:#22D3EE !important;--dsw-alias-label-primary:#EAFEFF !important;--dsw-alias-label-secondary:#9BE9F5 !important;--dsw-alias-label-tertiary:#6BB8C4 !important;--dsw-alias-bg-layer-1:#0B1220 !important;--dsw-alias-bg-layer-2:#101A2E !important;--dsw-alias-bg-layer-3:#16223A !important;--dsw-alias-border-l2:#1F3A55 !important;--dsw-alias-state-success-primary:#22D3EE !important;--dsw-alias-state-error-primary:#E879F9 !important;}\n' +
+          '[class*="sidebarCol"]{background:linear-gradient(180deg,#0B1220 0%,#12263F 55%,#1A3257 100%) !important;border-right:1px solid rgba(34,211,238,0.35) !important;}\n' +
+          '[class*="sidebarCol"] [class*="_brand"]{background:linear-gradient(90deg,rgba(34,211,238,0.22),rgba(232,121,249,0.22)) !important;border-bottom:1px solid rgba(34,211,238,0.45) !important;}\n' +
+          '[class*="centerCol"], [class*="detailsCol"]{background:#080D18 !important;}\n' +
+          '[class*="panel"]{box-shadow:0 0 24px rgba(34,211,238,0.12) !important;}\n' +
+          '::selection{background:#22D3EE !important;color:#031018 !important;}' }
+    ];;
     const BRAND_COLOR = "#16204A";
     const DEFAULT_BG_NAME = "默认.jpg";
 
@@ -801,6 +840,10 @@ window.__ModuleLoader__.load({
       } else {
         injectCSS("deep-harness-appearance-gold", "");
       }
+
+      // 一键换肤(预设):皮肤覆盖主题令牌 + 结构样式,与品牌色/金边/背景独立
+      const skin = SKINS.find(s => s.id === lsGet("deepharness.skin", "none")) || SKINS[0];
+      injectCSS("deep-harness-appearance-skin", skin ? skin.css : "");
 
       if (theme) {
         const tokens = {};
@@ -971,11 +1014,24 @@ window.__ModuleLoader__.load({
     }
 
     // ── 外观设置(设置 → 通用 → DEEPHARNESS 外观)───────────────────
+    // 会话视图栏标签清单(侧边卡片开关用)
+    const VIEW_TABS = [
+      { id: "browser", label: "浏览器" },
+      { id: "files", label: "文件" },
+      { id: "terminal", label: "终端" },
+      { id: "stats", label: "统计" },
+      { id: "skills", label: "技能" },
+      { id: "env", label: "环境" }
+    ];
+    const tabOn = (id) => lsGet("deepharness.tab." + id, "on") !== "off";
+
     function AppearanceSettings() {
       const [brand, setBrand] = React.useState(lsGet("deepharness.brand", "on") !== "off");
       const [brandColor, setBrandColor] = React.useState(lsGet("deepharness.brandColor", BRAND_COLOR));
       const [font, setFont] = React.useState(lsGet("deepharness.font", "default"));
       const [gold, setGold] = React.useState(lsGet("deepharness.gold", "off") === "on");
+      const [skin, setSkin] = React.useState(lsGet("deepharness.skin", "none"));
+      const [tabTick, setTabTick] = React.useState(0);
       const [bg, setBg] = React.useState(resolveBackground());
       const [fonts, setFonts] = React.useState([]);
       const [backgrounds, setBackgrounds] = React.useState([]);
@@ -1004,6 +1060,8 @@ window.__ModuleLoader__.load({
       const setBrandColorV = (v) => { lsSet("deepharness.brandColor", v); setBrandColor(v); reload(); };
       const setFontV = (v) => { lsSet("deepharness.font", v); setFont(v); reload(); };
       const setGoldV = (v) => { lsSet("deepharness.gold", v ? "on" : "off"); setGold(v); reload(); };
+      const setSkinV = (v) => { lsSet("deepharness.skin", v); setSkin(v); reload(); };
+      const setTabV = (id, on) => { lsSet("deepharness.tab." + id, on ? "on" : "off"); setTabTick(x => x + 1); setMsg((on ? "已显示「" : "已隐藏「") + (VIEW_TABS.find(t => t.id === id) || {}).label + "」标签,刷新页面后生效"); };
       const setBgV = (next) => { lsSet("deepharness.background", JSON.stringify(next)); setBg(next); reload(); };
 
       const applyFontFile = async (name) => {
@@ -1109,6 +1167,24 @@ window.__ModuleLoader__.load({
         ),
 
         React.createElement("div", { style: STYLES.section },
+          React.createElement("span", { style: STYLES.sectionTitle }, "一键换肤(预设)"),
+          React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
+            SKINS.filter(s => s.id !== "none").map(s => React.createElement("button", {
+              key: s.id,
+              style: skin === s.id ? STYLES.buttonPrimary : STYLES.button,
+              title: "一键应用皮肤: " + s.label,
+              onClick: () => setSkinV(s.id)
+            }, s.label)),
+            skin !== "none" && React.createElement("button", {
+              style: { ...STYLES.button, borderColor: "#B45309", color: "#B45309" },
+              onClick: () => setSkinV("none")
+            }, "恢复默认")
+          ),
+          React.createElement("div", { style: STYLES.hint },
+            "皮肤一键切换,覆盖界面主色与面板风格(经典 XP 蓝 / 初音绿黑 / 樱花粉 / 深空紫 / 赛博霓虹);与品牌色、金边、背景互相独立,开启皮肤时以皮肤为准,关闭即回默认。")
+        ),
+
+        React.createElement("div", { style: STYLES.section },
           React.createElement("span", { style: STYLES.sectionTitle }, "装饰(金边)"),
           React.createElement("div", { style: STYLES.row },
             React.createElement("span", { style: STYLES.label }, "金边装饰"),
@@ -1183,6 +1259,28 @@ window.__ModuleLoader__.load({
         ),
 
         React.createElement("div", { style: STYLES.section },
+          React.createElement("span", { style: STYLES.sectionTitle }, "侧边卡片(标签开关)"),
+          React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 } },
+            VIEW_TABS.map(t => React.createElement("div", {
+              key: t.id,
+              style: {
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                padding: "8px 12px", borderRadius: 8, fontSize: 13,
+                background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l2)"
+              }
+            },
+              React.createElement("span", { style: { color: "var(--dsw-alias-label-primary)", fontWeight: 600 } }, t.label),
+              React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, cursor: "pointer" } },
+                React.createElement("input", { type: "checkbox", checked: tabOn(t.id), onChange: (e) => setTabV(t.id, e.target.checked) }),
+                React.createElement("span", { style: { fontSize: 12, color: "var(--dsw-alias-label-tertiary)" } }, "显示")
+              )
+            ))
+          ),
+          React.createElement("div", { style: STYLES.hint },
+            "会话视图栏的标签可逐项开关(默认全开);修改后刷新页面生效。")
+        ),
+
+        React.createElement("div", { style: STYLES.section },
           React.createElement("span", { style: STYLES.sectionTitle }, "导入字体"),
           React.createElement("div", { style: STYLES.row },
             React.createElement("label", { style: { ...STYLES.button, display: "inline-block" } },
@@ -1214,15 +1312,18 @@ window.__ModuleLoader__.load({
           React.createElement("button", {
             style: { ...STYLES.button, borderColor: "#B45309", color: "#B45309" },
             onClick: () => {
-              ["deepharness.brand", "deepharness.brandColor", "deepharness.font", "deepharness.background", "deepharness.gradient", "deepharness.customFonts"].forEach(k => {
+              ["deepharness.brand", "deepharness.brandColor", "deepharness.font", "deepharness.background", "deepharness.gradient", "deepharness.customFonts", "deepharness.skin", "deepharness.gold"].forEach(k => {
                 try { localStorage.removeItem(k); } catch { /* ignore */ }
               });
+              VIEW_TABS.forEach(t => { try { localStorage.removeItem("deepharness.tab." + t.id); } catch { /* ignore */ } });
               setBrand(true);
               setBrandColor(BRAND_COLOR);
               setFont("default");
+              setSkin("none");
+              setGold(false);
               setBg(resolveBackground());
               reload();
-              setMsg("✓ 已恢复默认外观(默认背景 默认.jpg + 品牌蓝玻璃)");
+              setMsg("✓ 已恢复默认外观(默认背景 默认.jpg + 品牌蓝玻璃 + 无皮肤)");
             }
           }, "恢复默认外观"),
           React.createElement("span", { style: STYLES.hint }, "一键清除外观设置并回到出厂默认")
@@ -1563,7 +1664,7 @@ window.__ModuleLoader__.load({
       try { window.__dshClientTheme = theme; } catch { /* ignore */ }
 
       // 会话视图栏:「浏览器」标签(内置轻量浏览器:搜索 / 本地纯前端调试 / F12)
-      ctx.slots.inject("conversation.view", () => slots.register({
+      if (tabOn("browser")) ctx.slots.inject("conversation.view", () => slots.register({
         name: "conversation.view",
         id: "browser",
         order: 10,
@@ -1572,7 +1673,7 @@ window.__ModuleLoader__.load({
       }, BrowserView));
 
       // 会话视图栏:「文件」标签
-      ctx.slots.inject("conversation.view", () => slots.register({
+      if (tabOn("files")) ctx.slots.inject("conversation.view", () => slots.register({
         name: "conversation.view",
         id: "files",
         order: 20,
@@ -1581,7 +1682,7 @@ window.__ModuleLoader__.load({
       }, FilesView));
 
       // 会话视图栏:「终端」标签
-      ctx.slots.inject("conversation.view", () => slots.register({
+      if (tabOn("terminal")) ctx.slots.inject("conversation.view", () => slots.register({
         name: "conversation.view",
         id: "terminal",
         order: 30,
@@ -1590,7 +1691,7 @@ window.__ModuleLoader__.load({
       }, TerminalView));
 
       // 会话视图栏:「统计」标签(会话 token/耗时/费用明细)
-      ctx.slots.inject("conversation.view", () => slots.register({
+      if (tabOn("stats")) ctx.slots.inject("conversation.view", () => slots.register({
         name: "conversation.view",
         id: "stats",
         order: 40,
@@ -1599,7 +1700,7 @@ window.__ModuleLoader__.load({
       }, StatsView));
 
       // 会话视图栏:「技能」标签(技能库浏览)
-      ctx.slots.inject("conversation.view", () => slots.register({
+      if (tabOn("skills")) ctx.slots.inject("conversation.view", () => slots.register({
         name: "conversation.view",
         id: "skills",
         order: 50,
@@ -1608,7 +1709,7 @@ window.__ModuleLoader__.load({
       }, SkillsView));
 
       // 会话视图栏:「环境」标签(版本/路径/诊断)
-      ctx.slots.inject("conversation.view", () => slots.register({
+      if (tabOn("env")) ctx.slots.inject("conversation.view", () => slots.register({
         name: "conversation.view",
         id: "env",
         order: 60,

@@ -1,0 +1,31 @@
+{
+  "name": "deep-harness-tools",
+  "version": "1.0.0",
+  "description": "DEEPHARNESS 工具插件:一键夺舍(迁移 Codex/Claude Code 配置)、soul.md 人设热重载、长期记忆(自动捕获+注入)、后端模型一键切换",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-theme",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ]
+    }
+  },
+  "license": "MIT"
+}
