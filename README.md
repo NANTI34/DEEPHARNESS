@@ -329,6 +329,8 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemovePlugin  # 同时
   - [myYangyunfan / dsh_desktop](https://github.com/myYangyunfan/dsh_desktop)([Gitee 镜像](https://gitee.com/my-yang-yunfan/dsh_desktop))
 - 感谢 [QCYTSN / dsh-dafeiyu](https://github.com/QCYTSN/dsh-dafeiyu) 贡献大肥鱼桌面伴侣(宠物 + 聊天,MIT)
 - 感谢 [zhu1090093659 / dsh-web-ui](https://github.com/zhu1090093659/dsh-web-ui)(BSD-3-Clause)与 [Small-tailqwq / dsh-deep-whale](https://github.com/Small-tailqwq/dsh-deep-whale)(CC BY-NC-SA 4.0,禁止商用)提供内置社区皮肤
+- 感谢 [Sanqi-normal / dsh-webui-market-plugin](https://github.com/Sanqi-normal/dsh-webui-market-plugin) 贡献插件市场(浏览 awesome-dsh-plugin.com 目录、一键安装/卸载到当前 profile,MIT;应用内入口:设置 → 插件 → 插件市场)
+- 感谢 [xmanrui / dsh-im](https://github.com/xmanrui/dsh-im) 贡献 IM 机器人接入(飞书/微信/企业微信/QQ/Slack/Telegram/Discord/WhatsApp,MIT;应用内入口:设置 → 插件 → IM机器人)
 - 感谢 DeepSeek AI 助手在本项目中的代码实现、DEBUG 与兼容性优化;应用内设置 →「感谢名单」可查看完整名单
 
 ---

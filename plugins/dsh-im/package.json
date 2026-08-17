@@ -1,0 +1,75 @@
+{
+  "name": "@xmanrui/dsh-im",
+  "version": "0.4.0",
+  "description": "通过扫码、App Manifest或机器人凭据把IM机器人接入DeepSeek Harness（支持飞书、微信、钉钉、企业微信、QQ、Slack、Telegram、Discord和WhatsApp）。",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xmanrui/dsh-im.git"
+  },
+  "homepage": "https://github.com/xmanrui/dsh-im#readme",
+  "bugs": "https://github.com/xmanrui/dsh-im/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "dsh-im": "bin/dsh-im.mjs"
+  },
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "assets",
+    "bin",
+    "cordis.patch.yml",
+    "lib",
+    "plugin-src",
+    "scripts",
+    "src",
+    "LICENSE",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "node plugin-src/client/build.mjs && node plugin-src/host/build.mjs",
+    "test": "node --test test/*.test.mjs test/channels/*/*.test.mjs",
+    "check": "npm test && npm run build && node scripts/verify-package.mjs"
+  },
+  "engines": {
+    "node": ">=22.19"
+  },
+  "dependencies": {
+    "@tencent-connect/qqbot-connector": "1.2.0",
+    "@tencent-connect/qqbot-nodejs": "1.0.4",
+    "@wecom/aibot-node-sdk": "1.0.7",
+    "dingtalk-stream": "2.1.4",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "@larksuiteoapi/node-sdk": "1.73.0",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "esbuild": "0.25.9",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-test-renderer": "18.3.1"
+  }
+}

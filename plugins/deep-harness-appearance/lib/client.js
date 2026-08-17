@@ -1947,9 +1947,14 @@ window.__ModuleLoader__.load({
         row("🐟 大肥鱼桌面伴侣",
           entry("dsh-dafeiyu", "QCYTSN — 状态驱动桌面宠物 + 聊天对话框(MIT)。",
             "https://github.com/QCYTSN/dsh-dafeiyu")),
+        row("🧩 社区插件(内置集成)",
+          entry("dsh-webui-market-plugin", "Sanqi-normal — 应用内插件市场:浏览 awesome-dsh-plugin.com 目录,一键安装/卸载到当前 profile(MIT)。",
+            "https://github.com/Sanqi-normal/dsh-webui-market-plugin"),
+          entry("dsh-im", "xmanrui — IM 机器人接入:飞书/微信/企业微信/QQ/Slack/Telegram/Discord/WhatsApp(MIT)。",
+            "https://github.com/xmanrui/dsh-im")),
         row("⚖️ 许可",
           React.createElement("div", { style: { fontSize: 12, lineHeight: 1.7, color: "var(--dsw-alias-label-tertiary)" } },
-            "DEEPHARNESS 本体与增强插件为 MIT 协议;内置大肥鱼(dsh-dafeiyu)为 MIT;内置皮肤来自 dsh-web-ui(BSD-3-Clause)与 dsh-deep-whale(CC BY-NC-SA 4.0 禁止商用),版权归原作者所有,随插件附许可文本;其余参考项目按其各自许可分发。"))
+            "DEEPHARNESS 本体与增强插件为 MIT 协议;内置大肥鱼(dsh-dafeiyu)、内置插件市场(dsh-webui-market-plugin)、内置 IM 接入(dsh-im)均为 MIT;内置皮肤来自 dsh-web-ui(BSD-3-Clause)与 dsh-deep-whale(CC BY-NC-SA 4.0 禁止商用),版权归原作者所有,随插件附许可文本;其余参考项目按其各自许可分发。"))
       );
     }
 
