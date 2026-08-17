@@ -877,6 +877,9 @@ window.__ModuleLoader__.load({
           // 金边延伸:对话框与各页面内部区域(仅描边/内阴影,不影响布局)
           '[role="dialog"], [class*="modal"], [class*="popover"], [class*="dropdown"], [class*="tooltip"] { border-color: rgba(212,175,55,0.45) !important; }\n' +
           '[role="dialog"] { box-shadow: 0 0 40px rgba(212,175,55,0.18), var(--dsw-shadow-lv3) !important; }\n' +
+          // 金边延伸:插件市场 / IM 机器人等社区插件 UI(设置 → 插件)保持同一套描边风
+          '[class*="mkts-modal"], [class*="mkts-queue"], [class*="dim-panel"], [class*="dim-surface"] { border-color: rgba(212,175,55,0.45) !important; }\n' +
+          '[class*="mkts-modal"] { box-shadow: 0 0 40px rgba(212,175,55,0.18), var(--dsw-shadow-lv3) !important; }\n' +
           '[role="dialog"] [class*="header"], [role="dialog"] [class*="title"], [class*="modal"] [class*="header"] { border-bottom: 1px solid rgba(212,175,55,0.35) !important; }\n' +
           '[class*="message"], [class*="chatItem"], [class*="bubble"], [class*="nodeItem"], [class*="sessionItem"] { border: 1px solid rgba(212,175,55,0.22) !important; }\n' +
           '[class*="message"]:hover, [class*="chatItem"]:hover, [class*="bubble"]:hover { border-color: rgba(212,175,55,0.45) !important; }\n' +
@@ -2044,13 +2047,33 @@ window.__ModuleLoader__.load({
         '[class*="VOzbGW_panel"] { width: min(1120px, calc(100vw - 48px)) !important; }');
 
       // 设置页左侧导航:核心只为 models/agent-presets/plugins 提供专属图标,
-      // 其余区块(含本插件三个)共用齿轮。给本插件三个区块配专属图案并隐藏重复齿轮。
-      // 导航按 order 排序,本插件区块(order 90/95/96)恒为最后三项。
+      // 其余区块共用齿轮。给外观/工具/感谢名单配专属图案并隐藏重复齿轮。
+      // 用文本精确匹配而非 nth-last-child:插件市场/IM 等第三方插件加入设置
+      // 区块后,单元格数量与顺序可能变化,位置推断会被误伤、图案错位。
       injectCSS("deep-harness-appearance-nav",
-        '[class*="navCell"]:nth-last-child(1) > svg, [class*="navCell"]:nth-last-child(2) > svg, [class*="navCell"]:nth-last-child(3) > svg { display: none !important; }\n' +
-        '[class*="navCell"]:nth-last-child(3)::before { content: "🎨"; margin-right: 7px; font-size: 13px; line-height: 1; }\n' +
-        '[class*="navCell"]:nth-last-child(2)::before { content: "🛠️"; margin-right: 7px; font-size: 13px; line-height: 1; }\n' +
-        '[class*="navCell"]:nth-last-child(1)::before { content: "🙏"; margin-right: 7px; font-size: 13px; line-height: 1; }');
+        '[class*="navCell"][data-dsh-nav="appearance"] > svg, [class*="navCell"][data-dsh-nav="tools"] > svg, [class*="navCell"][data-dsh-nav="credits"] > svg { display: none !important; }\n' +
+        '[class*="navCell"][data-dsh-nav="appearance"]::before { content: "🎨"; margin-right: 7px; font-size: 13px; line-height: 1; }\n' +
+        '[class*="navCell"][data-dsh-nav="tools"]::before { content: "🛠️"; margin-right: 7px; font-size: 13px; line-height: 1; }\n' +
+        '[class*="navCell"][data-dsh-nav="credits"]::before { content: "🙏"; margin-right: 7px; font-size: 13px; line-height: 1; }');
+
+      // 导航标记:按区块标签文本打标(设置面板按需挂载,用观察器持续补齐)
+      const NAV_MARKERS = { "界面外观": "appearance", "实用工具": "tools", "感谢名单": "credits" };
+      const markNav = () => {
+        try {
+          for (const el of document.querySelectorAll('[class*="navCell"]')) {
+            const t = (el.textContent || "").replace(/\s+/g, "");
+            const nav = t && NAV_MARKERS[t];
+            if (nav !== undefined && el.getAttribute("data-dsh-nav") !== nav) {
+              el.setAttribute("data-dsh-nav", nav);
+            }
+          }
+        } catch { /* ignore */ }
+      };
+      markNav();
+      if (typeof MutationObserver !== "undefined") {
+        const navObserver = new MutationObserver(() => markNav());
+        navObserver.observe(document.body, { childList: true, subtree: true });
+      }
 
       // 启动即应用已保存的外观(品牌色/字体/背景),重启后自动恢复。
       // 主题覆盖层由插件主流程统一持有;设置组件只触发"重新应用",

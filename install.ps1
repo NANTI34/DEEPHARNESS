@@ -98,21 +98,25 @@ foreach ($pluginName in $enhancePlugins) {
             if ($LASTEXITCODE -ne 0) { throw "插件安装失败($pluginName,dsh plugin,退出码 $LASTEXITCODE)" }
             Write-Host "      插件 $pluginName 已写入 %USERPROFILE%\.dsh\profiles\web(随服务启动自动加载)" -ForegroundColor Green
         } else {
-            # 无 pnpm 回退:手动复制插件到 profile 依赖目录,并把加载行写入 home 用户层
+            # 无 pnpm 回退:复制插件到 profile 依赖目录,并把插件自带的 bundle patch 追加进 home 层
+            # 必须用插件自带的 cordis.patch.yml(而非按包名合成一行):
+            # guard 是 guard+guard-api 两行,插件市场/IM 的 insert id 与包名不同,
+            # 合成写法会漏挂 guard-api 或产生错误的挂载语义。
             Write-Host '      pnpm 不可用,使用手动复制回退方案...' -ForegroundColor Yellow
             $home = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
             $profileNm = Join-Path $home "profiles\node_modules\$pluginName"
             New-Item -ItemType Directory -Force -Path $profileNm | Out-Null
             Copy-Item (Join-Path $pluginDir '*') $profileNm -Recurse -Force
+            $pluginPatch = Join-Path $pluginDir 'cordis.patch.yml'
+            $patchText = if (Test-Path $pluginPatch) {
+                Get-Content $pluginPatch -Raw
+            } else {
+                "- insert:`n    - id: $pluginName`n      name: '$pluginName'`n"
+            }
             $homePatch = Join-Path $home 'cordis.patch.yml'
-            $row = @"
-- insert:
-    - id: $pluginName
-      name: $pluginName
-"@
             $content = if (Test-Path $homePatch) { Get-Content $homePatch -Raw } else { "[]" + [Environment]::NewLine }
             if ($content -notmatch [regex]::Escape($pluginName)) {
-                $content = $content.TrimEnd() + [Environment]::NewLine + $row
+                $content = $content.TrimEnd() + [Environment]::NewLine + $patchText.TrimEnd() + [Environment]::NewLine
                 Set-Content -Path $homePatch -Value $content -Encoding UTF8
             }
             Write-Host "      插件 $pluginName 已复制到 $profileNm 并写入 $homePatch" -ForegroundColor Green
