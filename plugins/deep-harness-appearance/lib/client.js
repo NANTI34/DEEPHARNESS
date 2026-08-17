@@ -846,12 +846,20 @@ window.__ModuleLoader__.load({
             css.push("html, body { background-color: " + mixToward(brandColor, "#000000", 0.35) + "; }");
           }
         } else {
-          // 皮肤已加载并接管:清掉 html/body 壁纸,避免白底/错底干扰皮肤
-          css.push("html, body { background: none !important; background-color: transparent !important; }");
+          // 皮肤已加载并接管:仅清掉 html 的底色,避免白底/错底干扰皮肤。
+          // 注意:绝不能写成 background:none !important——!important 会压过皮肤
+          // 在 body 内联样式/CSS 中设置的 background-image(如 maid 的内联 WEBP、
+          // minecraft/xp 的 body[data-dsh-*] 渐变),导致皮肤背景加载不出。
+          css.push("html, body { background-color: transparent; }");
         }
         injectCSS("deep-harness-appearance-bg", css.join("\n"));
       };
       renderBg();
+
+      // 皮肤装饰层一律不拦截鼠标(标题栏/状态栏/舞台等纯装饰),
+      // 防止皮肤 chrome 盖住设置按钮/对话框等真实交互元素。
+      // 注意:XP 的开始按钮是真实 button(未标记 data-skin-chrome),不受影响。
+      injectCSS("deep-harness-appearance-chrome", "[data-skin-chrome] { pointer-events: none !important; }");
 
       // 金边装饰(可开关):金色渐变边框、光晕、繁复华丽风格
       const gold = lsGet("deepharness.gold", "off") === "on";
@@ -886,14 +894,13 @@ window.__ModuleLoader__.load({
       const savedSkinId = lsGet("deepharness.skin", "none");
       const skin = SKINS.find(s => s.id === savedSkinId) || COMMUNITY_SKINS.find(s => s.id === savedSkinId) || SKINS[0];
       // 卸载社区皮肤:先执行皮肤 effect 的 disposer(撤销装饰/标题/body 属性),再兜底清理
-      const SKIN_DISPOSERS = [];
       const unapplyCommunitySkin = () => {
         while (SKIN_DISPOSERS.length) {
           const d = SKIN_DISPOSERS.pop();
           try { if (typeof d === "function") d(); } catch { /* ignore */ }
         }
         try {
-          [...document.body.attributes].filter(a => a.name.startsWith("data-dsh-")).forEach(a => document.body.removeAttribute(a.name));
+          [...document.body.attributes].filter(a => a.name.startsWith("data-dsh-") || a.name.startsWith("data-maid-")).forEach(a => document.body.removeAttribute(a.name));
           document.querySelectorAll("[data-skin-chrome]").forEach((el) => el.remove());
           document.querySelectorAll('style[data-plugin-css*="skin"]').forEach((el) => el.remove());
           try {
@@ -985,6 +992,9 @@ window.__ModuleLoader__.load({
     // 全局外观层:主题令牌覆盖由插件主流程统一持有(见 apply 的 ctx.effect),
     // 设置组件触发重新应用但不在卸载时撤销,保证关闭设置后外观不丢失。
     let appearanceDisposer = null;
+    // 皮肤 disposer 必须提升到模块作用域:applyAppearance 每次调用都会重新执行,
+    // 若声明在函数内则重应用时旧数组被丢弃,旧皮肤的清理逻辑永不执行(退出残留根因)。
+    const SKIN_DISPOSERS = [];
     function reapplyAppearance(theme) {
       if (appearanceDisposer) {
         try { appearanceDisposer(); } catch { /* ignore */ }
