@@ -124,24 +124,24 @@ foreach ($pluginName in $enhancePlugins) {
     } finally { Pop-Location }
 }
 
-# 4b. 安装 router-standard 思维模式路由预设(与 dsh-super-injector 配套,新增"Router Standard"会话模式)
-$presetId = 'router-standard'
-$presetDir = Join-Path $Root "presets\$presetId"
-if (-not (Test-Path (Join-Path $presetDir 'agent.cordis.yml'))) { $presetDir = Join-Path $presetDir $presetId }
-if (Test-Path (Join-Path $presetDir 'router-standard')) {
-    $home = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
-    $target = Join-Path $home ".agent-presets\$presetId"
-    if (Test-Path $target) {
-        Write-Host "      预设已存在:$target(如需更新请手动删除后重跑)" -ForegroundColor Yellow
+# 4b. 安装 router 思维模式路由预设(与 dsh-super-injector 配套,新增"Router Standard / Router Spec"会话模式)
+# 注意:dsh-agent-presets 的槽位是 <home>\.agent-presets\<id>\agent.cordis.yml —— 每个模式必须是
+# 独立的顶层目录,嵌套目录(`.agent-presets\router-standard\router-standard\...`)不会被发现。
+$dshHomeVal = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
+$presetDir = Join-Path $Root 'presets\router-standard'
+foreach ($mode in @('router-standard', 'router-spec')) {
+    if (Test-Path (Join-Path $presetDir "$mode\agent.cordis.yml")) {
+        $target = Join-Path $dshHomeVal ".agent-presets\$mode"
+        if (Test-Path (Join-Path $target 'agent.cordis.yml')) {
+            Write-Host "      预设已存在:$target(如需更新请手动删除后重跑)" -ForegroundColor Yellow
+        } else {
+            New-Item -ItemType Directory -Force -Path $target | Out-Null
+            Copy-Item -Path (Join-Path $presetDir "$mode\*") -Destination $target -Recurse -Force
+            Write-Host "      预设已安装:$target(重启后新会话可选 Router Standard / Router Spec 模式)" -ForegroundColor Green
+        }
     } else {
-        New-Item -ItemType Directory -Force -Path $target | Out-Null
-        Copy-Item -Path (Join-Path $presetDir 'router-standard') -Destination $target -Recurse
-        Copy-Item -Path (Join-Path $presetDir 'router-spec') -Destination $target -Recurse
-        Copy-Item -Path (Join-Path $presetDir 'LICENSE'), (Join-Path $presetDir 'NOTICE') -Destination $target -ErrorAction SilentlyContinue
-        Write-Host "      预设已安装:$target(重启后新会话可选 Router Standard / Router Spec 模式)" -ForegroundColor Green
+        Write-Host "      警告:未找到 presets\router-standard\$mode,跳过该预设安装" -ForegroundColor Yellow
     }
-} else {
-    Write-Host '      警告:未找到 presets\router-standard,跳过预设安装' -ForegroundColor Yellow
 }
 
 # 5. 创建桌面快捷方式
