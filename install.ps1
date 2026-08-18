@@ -72,8 +72,8 @@ if ($SkipNpmInstall -or ((Test-Path (Join-Path $desktopDir 'node_modules\electro
     Write-Host '      desktop/ 依赖安装完成' -ForegroundColor Green
 }
 
-# 4. 安装常驻插件(外观/费用/文件视图/终端/浏览器 + 工具:夺舍/人设/记忆/后端 + 安装安全网 + 插件市场 + IM 机器人接入 → web profile 永久加载)
-$enhancePlugins = @('deep-harness-appearance', 'deep-harness-tools', 'dsh-plugin-guard', 'dsh-webui-market-plugin', 'dsh-im')
+# 4. 安装常驻插件(外观/费用/文件视图/终端/浏览器 + 工具:夺舍/人设/记忆/后端 + 安装安全网 + 插件市场 + IM 机器人接入 + 运行时插件注入器 → web profile 永久加载)
+$enhancePlugins = @('deep-harness-appearance', 'deep-harness-tools', 'dsh-plugin-guard', 'dsh-webui-market-plugin', 'dsh-im', 'dsh-super-injector')
 Write-Host '[4/5] 安装常驻插件(' + ($enhancePlugins -join ' + ') + ' → web profile)...' -ForegroundColor Yellow
 foreach ($pluginName in $enhancePlugins) {
     $pluginDir = Join-Path $Root "plugins\$pluginName"
@@ -122,6 +122,26 @@ foreach ($pluginName in $enhancePlugins) {
             Write-Host "      插件 $pluginName 已复制到 $profileNm 并写入 $homePatch" -ForegroundColor Green
         }
     } finally { Pop-Location }
+}
+
+# 4b. 安装 router-standard 思维模式路由预设(与 dsh-super-injector 配套,新增"Router Standard"会话模式)
+$presetId = 'router-standard'
+$presetDir = Join-Path $Root "presets\$presetId"
+if (-not (Test-Path (Join-Path $presetDir 'agent.cordis.yml'))) { $presetDir = Join-Path $presetDir $presetId }
+if (Test-Path (Join-Path $presetDir 'router-standard')) {
+    $home = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
+    $target = Join-Path $home ".agent-presets\$presetId"
+    if (Test-Path $target) {
+        Write-Host "      预设已存在:$target(如需更新请手动删除后重跑)" -ForegroundColor Yellow
+    } else {
+        New-Item -ItemType Directory -Force -Path $target | Out-Null
+        Copy-Item -Path (Join-Path $presetDir 'router-standard') -Destination $target -Recurse
+        Copy-Item -Path (Join-Path $presetDir 'router-spec') -Destination $target -Recurse
+        Copy-Item -Path (Join-Path $presetDir 'LICENSE'), (Join-Path $presetDir 'NOTICE') -Destination $target -ErrorAction SilentlyContinue
+        Write-Host "      预设已安装:$target(重启后新会话可选 Router Standard / Router Spec 模式)" -ForegroundColor Green
+    }
+} else {
+    Write-Host '      警告:未找到 presets\router-standard,跳过预设安装' -ForegroundColor Yellow
 }
 
 # 5. 创建桌面快捷方式

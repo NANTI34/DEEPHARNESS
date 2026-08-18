@@ -331,6 +331,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemovePlugin  # 同时
 - 感谢 [zhu1090093659 / dsh-web-ui](https://github.com/zhu1090093659/dsh-web-ui)(BSD-3-Clause)与 [Small-tailqwq / dsh-deep-whale](https://github.com/Small-tailqwq/dsh-deep-whale)(CC BY-NC-SA 4.0,禁止商用)提供内置社区皮肤
 - 感谢 [Sanqi-normal / dsh-webui-market-plugin](https://github.com/Sanqi-normal/dsh-webui-market-plugin) 贡献插件市场(浏览 awesome-dsh-plugin.com 目录、一键安装/卸载到当前 profile,MIT;应用内入口:设置 → 插件 → 插件市场)
 - 感谢 [xmanrui / dsh-im](https://github.com/xmanrui/dsh-im) 贡献 IM 机器人接入(飞书/微信/企业微信/QQ/Slack/Telegram/Discord/WhatsApp,MIT;应用内入口:设置 → 插件 → IM机器人)
+- 感谢 [yjh051108 / dsh-routing-suite](https://github.com/yjh051108/dsh-routing-suite) 贡献运行时插件注入器与思维模式路由预设(dsh-super-injector,BSD-3-Clause:dev_* 工具全家桶/免重启注入/热重载/自愈;dsh-router-standard,MIT:Router Standard / Router Spec 任务感知路由模式,应用内入口:设置 → 注入器;新会话可选 Router Standard / Router Spec 模式)
 - 感谢 DeepSeek AI 助手在本项目中的代码实现、DEBUG 与兼容性优化;应用内设置 →「感谢名单」可查看完整名单
 
 ---

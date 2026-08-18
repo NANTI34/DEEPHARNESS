@@ -877,8 +877,8 @@ window.__ModuleLoader__.load({
           // 金边延伸:对话框与各页面内部区域(仅描边/内阴影,不影响布局)
           '[role="dialog"], [class*="modal"], [class*="popover"], [class*="dropdown"], [class*="tooltip"] { border-color: rgba(212,175,55,0.45) !important; }\n' +
           '[role="dialog"] { box-shadow: 0 0 40px rgba(212,175,55,0.18), var(--dsw-shadow-lv3) !important; }\n' +
-          // 金边延伸:插件市场 / IM 机器人等社区插件 UI(设置 → 插件)保持同一套描边风
-          '[class*="mkts-modal"], [class*="mkts-queue"], [class*="dim-panel"], [class*="dim-surface"] { border-color: rgba(212,175,55,0.45) !important; }\n' +
+          // 金边延伸:插件市场 / IM 机器人 / 运行时注入器等社区插件 UI(设置 → 插件)保持同一套描边风
+          '[class*="mkts-modal"], [class*="mkts-queue"], [class*="dim-panel"], [class*="dim-surface"], [class*="spi-page"], [class*="spi-item"], [class*="spi-add"], [class*="spi-input"], [class*="spi-msg"] { border-color: rgba(212,175,55,0.45) !important; }\n' +
           '[class*="mkts-modal"] { box-shadow: 0 0 40px rgba(212,175,55,0.18), var(--dsw-shadow-lv3) !important; }\n' +
           '[role="dialog"] [class*="header"], [role="dialog"] [class*="title"], [class*="modal"] [class*="header"] { border-bottom: 1px solid rgba(212,175,55,0.35) !important; }\n' +
           '[class*="message"], [class*="chatItem"], [class*="bubble"], [class*="nodeItem"], [class*="sessionItem"] { border: 1px solid rgba(212,175,55,0.22) !important; }\n' +
@@ -1954,10 +1954,12 @@ window.__ModuleLoader__.load({
           entry("dsh-webui-market-plugin", "Sanqi-normal — 应用内插件市场:浏览 awesome-dsh-plugin.com 目录,一键安装/卸载到当前 profile(MIT)。",
             "https://github.com/Sanqi-normal/dsh-webui-market-plugin"),
           entry("dsh-im", "xmanrui — IM 机器人接入:飞书/微信/企业微信/QQ/Slack/Telegram/Discord/WhatsApp(MIT)。",
-            "https://github.com/xmanrui/dsh-im")),
+            "https://github.com/xmanrui/dsh-im"),
+          entry("dsh-super-injector + dsh-router-standard", "yjh051108 — dsh-routing-suite:运行时插件注入器(dev_* 全家桶,BSD-3-Clause)+ 思维模式路由预设(Router Standard/Spec,MIT)。",
+            "https://github.com/yjh051108/dsh-routing-suite")),
         row("⚖️ 许可",
           React.createElement("div", { style: { fontSize: 12, lineHeight: 1.7, color: "var(--dsw-alias-label-tertiary)" } },
-            "DEEPHARNESS 本体与增强插件为 MIT 协议;内置大肥鱼(dsh-dafeiyu)、内置插件市场(dsh-webui-market-plugin)、内置 IM 接入(dsh-im)均为 MIT;内置皮肤来自 dsh-web-ui(BSD-3-Clause)与 dsh-deep-whale(CC BY-NC-SA 4.0 禁止商用),版权归原作者所有,随插件附许可文本;其余参考项目按其各自许可分发。"))
+            "DEEPHARNESS 本体与增强插件为 MIT 协议;内置大肥鱼(dsh-dafeiyu)、内置插件市场(dsh-webui-market-plugin)、内置 IM 接入(dsh-im)、思维模式路由预设(dsh-router-standard)均为 MIT;内置运行时注入器(dsh-super-injector)为 BSD-3-Clause;内置皮肤来自 dsh-web-ui(BSD-3-Clause)与 dsh-deep-whale(CC BY-NC-SA 4.0 禁止商用),版权归原作者所有,随插件附许可文本;其余参考项目按其各自许可分发。"))
       );
     }
 
