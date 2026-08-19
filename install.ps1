@@ -73,7 +73,7 @@ if ($SkipNpmInstall -or ((Test-Path (Join-Path $desktopDir 'node_modules\electro
 }
 
 # 4. 安装常驻插件(外观/费用/文件视图/终端/浏览器 + 工具:夺舍/人设/记忆/后端 + 安装安全网 + 插件市场 + IM 机器人接入 + 运行时插件注入器 → web profile 永久加载)
-$enhancePlugins = @('deep-harness-appearance', 'deep-harness-tools', 'dsh-plugin-guard', 'dsh-webui-market-plugin', 'dsh-im', 'dsh-super-injector')
+$enhancePlugins = @('deep-harness-appearance', 'deep-harness-tools', 'dsh-plugin-guard', 'dsh-webui-market-plugin', 'dsh-im', 'dsh-super-injector', 'dsh-open-design')
 Write-Host '[4/5] 安装常驻插件(' + ($enhancePlugins -join ' + ') + ' → web profile)...' -ForegroundColor Yellow
 foreach ($pluginName in $enhancePlugins) {
     $pluginDir = Join-Path $Root "plugins\$pluginName"

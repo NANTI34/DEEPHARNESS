@@ -1,0 +1,15 @@
+# OpenDesign stdio profile surface, adapted for the web profile.
+
+# 与上游差异(适配与优化):
+# - 不覆盖 system-prompt persona(保留 web profile 现有 persona 与路由模式)
+# - 不禁用 hmr(保留热更新能力)
+# - runtime.apply 在未提供 startup 模式时静默跳过(web profile 零副作用),
+#   需要 OpenDesign 驱动时以 dsh --profile web --stdio/--probe/--models 启用
+
+- insert:
+    - id: open-design-startup
+      name: '@open-design/dsh-runtime/startup'
+
+    - id: open-design-runtime
+      name: '@open-design/dsh-runtime'
+      inject: [openDesignStartup]

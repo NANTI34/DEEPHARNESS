@@ -1,0 +1,21 @@
+{
+  "name": "@open-design/dsh-runtime",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness profile runtime for OpenDesign (adapted for DEEPHARNESS web profile)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./startup": "./dist/startup.js",
+    "./invariant": "./dist/invariant.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {}
+}

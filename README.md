@@ -254,6 +254,10 @@ DEEPHARNESS/
 │     ├─ lib/client.js         # 设置页卡片(设置 → 大肥鱼)
 │     ├─ runtime/helper.py     # 宠物窗口源码(PySide6)
 │     └─ runtime/bin/win32-x64/dsh-dafeiyu-helper.exe  # 编译好的宠物程序
+│  ├─ dsh-open-design/          # OpenDesign 运行时适配(@open-design/dsh-runtime,Apache-2.0,来自 nexu-io/open-design)
+│  │  ├─ src/                   # host 半:startup(CLI flag 解析)+ runtime(JSONL stdio 协议)
+│  │  ├─ dist/                  # 构建产物(index.js/startup.js/invariant.js)
+│  │  └─ cordis.patch.yml       # 服务注入补丁(仅插入 startup+runtime 两条,保留 persona 与热更新)
 ├─ assets/
 │  └─ backgrounds/默认.jpg     # 出厂默认背景(16:9 裁剪,2560×1440)
 ├─ launcher/
@@ -332,6 +336,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemovePlugin  # 同时
 - 感谢 [Sanqi-normal / dsh-webui-market-plugin](https://github.com/Sanqi-normal/dsh-webui-market-plugin) 贡献插件市场(浏览 awesome-dsh-plugin.com 目录、一键安装/卸载到当前 profile,MIT;应用内入口:设置 → 插件 → 插件市场)
 - 感谢 [xmanrui / dsh-im](https://github.com/xmanrui/dsh-im) 贡献 IM 机器人接入(飞书/微信/企业微信/QQ/Slack/Telegram/Discord/WhatsApp,MIT;应用内入口:设置 → 插件 → IM机器人)
 - 感谢 [yjh051108 / dsh-routing-suite](https://github.com/yjh051108/dsh-routing-suite) 贡献运行时插件注入器与思维模式路由预设(dsh-super-injector,BSD-3-Clause:dev_* 工具全家桶/免重启注入/热重载/自愈;dsh-router-standard,MIT:Router Standard / Router Spec 任务感知路由模式,应用内入口:设置 → 注入器;新会话可选 Router Standard / Router Spec 模式)
+- 感谢 [nexu-io / open-design](https://github.com/nexu-io/open-design) 贡献 OpenDesign 运行时适配(@open-design/dsh-runtime,Apache-2.0:JSONL stdio 协议,让 OpenDesign 驱动 Harness 完成编码/设计任务;已适配 web profile——保留现有 persona 与热更新,`dsh --profile <od-profile> --probe/--models/--stdio` 启用)
 - 感谢 DeepSeek AI 助手在本项目中的代码实现、DEBUG 与兼容性优化;应用内设置 →「感谢名单」可查看完整名单
 
 ---

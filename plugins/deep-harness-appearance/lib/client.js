@@ -1956,10 +1956,12 @@ window.__ModuleLoader__.load({
           entry("dsh-im", "xmanrui — IM 机器人接入:飞书/微信/企业微信/QQ/Slack/Telegram/Discord/WhatsApp(MIT)。",
             "https://github.com/xmanrui/dsh-im"),
           entry("dsh-super-injector + dsh-router-standard", "yjh051108 — dsh-routing-suite:运行时插件注入器(dev_* 全家桶,BSD-3-Clause)+ 思维模式路由预设(Router Standard/Spec,MIT)。",
-            "https://github.com/yjh051108/dsh-routing-suite")),
+            "https://github.com/yjh051108/dsh-routing-suite"),
+          entry("dsh-open-design", "nexu-io — OpenDesign 运行时适配:JSONL stdio 协议,让 OpenDesign 驱动 Harness 完成编码/设计任务(Apache-2.0,已适配 web 版保留 persona 与热更新)。",
+            "https://github.com/nexu-io/open-design")),
         row("⚖️ 许可",
           React.createElement("div", { style: { fontSize: 12, lineHeight: 1.7, color: "var(--dsw-alias-label-tertiary)" } },
-            "DEEPHARNESS 本体与增强插件为 MIT 协议;内置大肥鱼(dsh-dafeiyu)、内置插件市场(dsh-webui-market-plugin)、内置 IM 接入(dsh-im)、思维模式路由预设(dsh-router-standard)均为 MIT;内置运行时注入器(dsh-super-injector)为 BSD-3-Clause;内置皮肤来自 dsh-web-ui(BSD-3-Clause)与 dsh-deep-whale(CC BY-NC-SA 4.0 禁止商用),版权归原作者所有,随插件附许可文本;其余参考项目按其各自许可分发。"))
+            "DEEPHARNESS 本体与增强插件为 MIT 协议;内置大肥鱼(dsh-dafeiyu)、内置插件市场(dsh-webui-market-plugin)、内置 IM 接入(dsh-im)、思维模式路由预设(dsh-router-standard)均为 MIT;内置运行时注入器(dsh-super-injector)为 BSD-3-Clause;内置 OpenDesign 运行时(dsh-open-design)为 Apache-2.0;内置皮肤来自 dsh-web-ui(BSD-3-Clause)与 dsh-deep-whale(CC BY-NC-SA 4.0 禁止商用),版权归原作者所有,随插件附许可文本;其余参考项目按其各自许可分发。"))
       );
     }
 
